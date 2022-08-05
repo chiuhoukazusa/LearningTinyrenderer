@@ -1,8 +1,8 @@
-# Install script for directory: E:/LearningTinyRenderer/main
+# Install script for directory: E:/LearningTinyRenderer
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "E:/LearningTinyRenderer/main/out/install/x64-Debug")
+  set(CMAKE_INSTALL_PREFIX "E:/LearningTinyRenderer/out/install/x64-Debug")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -40,5 +40,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "E:/LearningTinyRenderer/main/out/build/x64-Debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "E:/LearningTinyRenderer/out/build/x64-Debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

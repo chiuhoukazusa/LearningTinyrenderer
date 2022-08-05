@@ -39,7 +39,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "e:/LearningTinyRenderer/main/out/build/x64-Debug"
+			"value" : "e:/LearningTinyRenderer/out/build/x64-Debug"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -515,7 +515,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "E:/LearningTinyRenderer/main"
+			"value" : "E:/LearningTinyRenderer"
 		},
 		{
 			"name" : "CMAKE_INSTALL_PREFIX",
@@ -527,7 +527,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "E:/LearningTinyRenderer/main/out/install/x64-Debug"
+			"value" : "E:/LearningTinyRenderer/out/install/x64-Debug"
 		},
 		{
 			"name" : "CMAKE_LINKER",
@@ -711,7 +711,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "main"
+			"value" : "tinyrenderer"
 		},
 		{
 			"name" : "CMAKE_RANLIB",
@@ -1054,19 +1054,179 @@
 			"value" : "FALSE"
 		},
 		{
-			"name" : "main_BINARY_DIR",
+			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenMP",
 			"properties" : 
 			[
 				{
 					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
+					"value" : "Details about finding OpenMP"
 				}
 			],
-			"type" : "STATIC",
-			"value" : "E:/LearningTinyRenderer/main/out/build/x64-Debug"
+			"type" : "INTERNAL",
+			"value" : "[TRUE][TRUE][c ][v2.0()]"
 		},
 		{
-			"name" : "main_SOURCE_DIR",
+			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenMP_C",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Details about finding OpenMP_C"
+				}
+			],
+			"type" : "INTERNAL",
+			"value" : "[-openmp][v2.0()]"
+		},
+		{
+			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenMP_CXX",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Details about finding OpenMP_CXX"
+				}
+			],
+			"type" : "INTERNAL",
+			"value" : "[-openmp][v2.0()]"
+		},
+		{
+			"name" : "OpenMP_COMPILE_RESULT_CXX_openmp",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Result of TRY_COMPILE"
+				}
+			],
+			"type" : "INTERNAL",
+			"value" : "TRUE"
+		},
+		{
+			"name" : "OpenMP_COMPILE_RESULT_C_openmp",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Result of TRY_COMPILE"
+				}
+			],
+			"type" : "INTERNAL",
+			"value" : "TRUE"
+		},
+		{
+			"name" : "OpenMP_CXX_FLAGS",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "CXX compiler flags for OpenMP parallelization"
+				}
+			],
+			"type" : "STRING",
+			"value" : "-openmp"
+		},
+		{
+			"name" : "OpenMP_CXX_LIB_NAMES",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "CXX compiler libraries for OpenMP parallelization"
+				}
+			],
+			"type" : "STRING",
+			"value" : ""
+		},
+		{
+			"name" : "OpenMP_CXX_SPEC_DATE",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "CXX compiler's OpenMP specification date"
+				}
+			],
+			"type" : "INTERNAL",
+			"value" : "200203"
+		},
+		{
+			"name" : "OpenMP_C_FLAGS",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "C compiler flags for OpenMP parallelization"
+				}
+			],
+			"type" : "STRING",
+			"value" : "-openmp"
+		},
+		{
+			"name" : "OpenMP_C_LIB_NAMES",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "C compiler libraries for OpenMP parallelization"
+				}
+			],
+			"type" : "STRING",
+			"value" : ""
+		},
+		{
+			"name" : "OpenMP_C_SPEC_DATE",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "C compiler's OpenMP specification date"
+				}
+			],
+			"type" : "INTERNAL",
+			"value" : "200203"
+		},
+		{
+			"name" : "OpenMP_SPECTEST_CXX_",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Result of TRY_COMPILE"
+				}
+			],
+			"type" : "INTERNAL",
+			"value" : "TRUE"
+		},
+		{
+			"name" : "OpenMP_SPECTEST_C_",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Result of TRY_COMPILE"
+				}
+			],
+			"type" : "INTERNAL",
+			"value" : "TRUE"
+		},
+		{
+			"name" : "tinyrenderer_BINARY_DIR",
 			"properties" : 
 			[
 				{
@@ -1075,7 +1235,19 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "E:/LearningTinyRenderer/main"
+			"value" : "E:/LearningTinyRenderer/out/build/x64-Debug"
+		},
+		{
+			"name" : "tinyrenderer_SOURCE_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Value Computed by CMake"
+				}
+			],
+			"type" : "STATIC",
+			"value" : "E:/LearningTinyRenderer"
 		}
 	],
 	"kind" : "cache",
