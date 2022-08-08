@@ -1,3 +1,0 @@
-E:/LearningTinyRenderer/out/build/x64-Debug/CMakeFiles/tinyrenderer.dir
-E:/LearningTinyRenderer/out/build/x64-Debug/CMakeFiles/edit_cache.dir
-E:/LearningTinyRenderer/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
