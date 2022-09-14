@@ -1,21 +1,20 @@
 #include "tgaimage.h"
 #include "rasterizer.hpp"
 #include <iostream>
+#include "myEigen.hpp"
 
-rst::rasterizer::rasterizer(std::string f, TGAImage& img) {
-	filename = f;
-	image = img;
-	width = image.width();
-	height = image.height();
-	image.flip_vertically();//让坐标原点位于图像左下角
+rst::rasterizer::rasterizer(std::string f, TGAImage& img)
+	:filename(f), image(img), width(img.width()), height(img.height())
+{	
+	image.flip_vertically(); /*让坐标原点位于图像左下角*/
 }
 
-void rst::rasterizer::draw_line(int x0, int y0, int x1, int y1) {
+void rst::rasterizer::draw_line(myEigen::Vector2i v0, myEigen::Vector2i v1) {
 	int x, y, dx, dy, dxa, dya, px, py, xb, yb, i;
-	x = x0;
-	y = y0;
-	dx = x1 - x0;
-	dy = y1 - y0;
+	x = v0.x;
+	y = v0.y;
+	dx = v1.x - v0.x;
+	dy = v1.y - v0.y;
 	dxa = abs(dx);
 	dya = abs(dy);
 	px = 2 * dya - dxa;
@@ -23,15 +22,15 @@ void rst::rasterizer::draw_line(int x0, int y0, int x1, int y1) {
 	image.set(x, y, red);
 	if (dya < dxa) {
 		if (dx > 0) {
-			x = x0;
-			y = y0;
-			xb = x1;
+			x = v0.x;
+			y = v0.y;
+			xb = v1.x;
 		}
 		else
 		{
-			x = x1;
-			y = y1;
-			xb = x0;
+			x = v1.x;
+			y = v1.y;
+			xb = v0.x;
 		}
 		for (i = 0; x <= xb; i++) {
 			x++;
@@ -55,15 +54,15 @@ void rst::rasterizer::draw_line(int x0, int y0, int x1, int y1) {
 	else
 	{
 		if (dy > 0) {
-			x = x0;
-			y = y0;
-			yb = y1;
+			x = v0.x;
+			y = v0.y;
+			yb = v1.y;
 		}
 		else
 		{
-			x = x1;
-			y = y1;
-			yb = y0;
+			x = v1.x;
+			y = v1.y;
+			yb = v0.y;
 		}
 		for (i = 0; y <= yb; i++) {
 			y++;
