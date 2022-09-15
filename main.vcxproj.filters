@@ -24,18 +24,12 @@
     <ClCompile Include="rasterizer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="myEigen.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tgaimage.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="rasterizer.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="myEigen.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

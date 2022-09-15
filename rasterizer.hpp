@@ -1,13 +1,12 @@
 #pragma once
 #include "tgaimage.h"
-#include "myEigen.hpp"
 
 namespace rst {
 
 	class rasterizer {
 		public:
 			rasterizer(std::string filename, TGAImage &image);
-			void draw_line(myEigen::Vector2i, myEigen::Vector2i);
+			void draw_line(int x0, int y0, int x1, int y1);
 			void output();
 
 		private:
