@@ -1,5 +1,11 @@
 # 01.一切的开始|Bresenham算法绘制线段
 
+## 本项目代码已托管至github，将会随着博客实时更新进度
+
+每一节的工程我都会创建一个新的分支，分支名由这一节的数字决定。
+
+https://github.com/chiuhoukazusa/LearningTinyrenderer/tree/01
+
 ## 前言
 
 看着一片黑屏的渲染器和空空如也的cpp文件，我们可能无从下手，那就让我们回忆一下相关图形学知识。
