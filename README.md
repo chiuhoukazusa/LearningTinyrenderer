@@ -4,13 +4,15 @@
 
 每一节的工程我都会创建一个新的分支，分支名由这一节的数字决定。
 
+https://github.com/chiuhoukazusa/LearningTinyrenderer/tree/02
+
 ## 前言
 
 在上一节的工程中，给定两个点，我们已经做到成功画出一条唯一确定的线段了。但是为了我们以后方便，我们显然需要封装向量类和矩阵类。当然我们可以直接使用Eigen库来完成这个问题，Eigen库非常的好用，但是我更想自己写一个试试。我们要做的其实完全不复杂，仅仅是封装几个类，并且没有什么性能要求，不会涉及到使用一些指令集来进行加速。所有的一切都将只用一些比较简单的c++代码进行实现。
 
 本节代码参考了一部分pbrt-v3的配套代码中的geometry.h文件中的实现方式和DirectXMath库的设计方式，来封装一些简单的涉及3d数学的类。以下是pbrt-v3的源码：
 
-[https://github.com/mmp/pbrt-v3]: https://github.com/mmp/pbrt-v3	"pbrt-v3"
+https://github.com/mmp/pbrt-v3 
 
 ## 我们需要做的
 
