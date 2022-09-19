@@ -15,27 +15,33 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="src\myEigen.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="tgaimage.cpp">
+    <ClCompile Include="src\rasterizer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="rasterizer.cpp">
+    <ClCompile Include="src\tgaimage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="myEigen.cpp">
+    <ClCompile Include="src\main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\transform.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="tgaimage.h">
+    <ClInclude Include="src\tgaimage.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="rasterizer.hpp">
+    <ClInclude Include="src\myEigen.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="myEigen.hpp">
+    <ClInclude Include="src\rasterizer.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\transform.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

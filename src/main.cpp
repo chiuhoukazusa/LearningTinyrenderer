@@ -13,7 +13,7 @@ const TGAColor red = TGAColor(255, 0, 0, 255);//红色
 
 int main(int argc, char** argv) {
     std::string filename = "output.tga";
-    TGAImage image(100, 100, TGAImage::RGB);
+    TGAImage image(700, 700, TGAImage::RGB);
     rst::rasterizer rst(filename, image);
     myEigen::Vector2i v0(50, 50);
     myEigen::Vector2i v1(0, 50);

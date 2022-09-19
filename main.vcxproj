@@ -142,15 +142,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="myEigen.cpp" />
-    <ClCompile Include="rasterizer.cpp" />
-    <ClCompile Include="tgaimage.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\myEigen.cpp" />
+    <ClCompile Include="src\rasterizer.cpp" />
+    <ClCompile Include="src\tgaimage.cpp" />
+    <ClCompile Include="src\transform.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="myEigen.hpp" />
-    <ClInclude Include="rasterizer.hpp" />
-    <ClInclude Include="tgaimage.h" />
+    <ClInclude Include="src\myEigen.hpp" />
+    <ClInclude Include="src\rasterizer.hpp" />
+    <ClInclude Include="src\tgaimage.h" />
+    <ClInclude Include="src\transform.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

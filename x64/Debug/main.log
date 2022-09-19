@@ -1,95 +1,97 @@
 ﻿  main.cpp
-E:\LearningTinyRenderer\myEigen.hpp(454,37): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
-E:\LearningTinyRenderer\myEigen.hpp(181,36): warning C4244: “参数”: 从“float”转换到“T”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(475,37): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(181,36): warning C4244: “参数”: 从“float”转换到“T”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\main.cpp(33): message : 查看对正在编译的函数 模板 实例化“myEigen::Vector4<int> myEigen::toVector4<int>(const myEigen::Vector3<int> &)”的引用
-E:\LearningTinyRenderer\myEigen.hpp(368,16): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\main.cpp(33): message : 查看对正在编译的函数 模板 实例化“myEigen::Vector4<int> myEigen::toVector4<int>(const myEigen::Vector3<int> &)”的引用
+E:\LearningTinyRenderer\src\myEigen.hpp(379,16): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\main.cpp(34): message : 查看对正在编译的函数 模板 实例化“myEigen::Matrixf4x4::Matrixf4x4<int>(myEigen::Vector4<int>,myEigen::Vector4<int>,myEigen::Vector4<int>,myEigen::Vector4<int>)”的引用
-E:\LearningTinyRenderer\myEigen.hpp(368,32): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\main.cpp(34): message : 查看对正在编译的函数 模板 实例化“myEigen::Matrixf4x4::Matrixf4x4<int>(myEigen::Vector4<int>,myEigen::Vector4<int>,myEigen::Vector4<int>,myEigen::Vector4<int>)”的引用
+E:\LearningTinyRenderer\src\myEigen.hpp(379,32): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(368,48): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(379,48): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(368,64): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(379,64): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(369,16): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(380,16): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(369,32): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(380,32): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(369,48): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(380,48): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(369,64): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(380,64): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(370,16): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(381,16): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(370,32): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(381,32): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(370,48): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(381,48): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(370,64): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(381,64): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(371,16): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(382,16): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(371,32): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(382,32): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(371,48): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(382,48): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
-E:\LearningTinyRenderer\myEigen.hpp(371,64): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(382,64): warning C4244: “=”: 从“T”转换到“float”，可能丢失数据
           with
           [
               T=int
           ]
   myEigen.cpp
-E:\LearningTinyRenderer\myEigen.hpp(454,37): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(475,37): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
   rasterizer.cpp
-E:\LearningTinyRenderer\myEigen.hpp(454,37): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+E:\LearningTinyRenderer\src\myEigen.hpp(475,37): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+  transform.cpp
+E:\LearningTinyRenderer\src\myEigen.hpp(475,37): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
   正在生成代码...
   main.vcxproj -> E:\LearningTinyRenderer\x64\Debug\main.exe

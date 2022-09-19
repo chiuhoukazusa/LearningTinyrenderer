@@ -287,11 +287,22 @@ namespace myEigen {
 			m[1][0] = t10, m[1][1] = t11, m[1][2] = t12;
 			m[2][0] = t20, m[2][1] = t21, m[2][2] = t22;
 		}
+
 		template<typename T>
 		Matrixf3x3(Vector3<T> v0, Vector3<T> v1, Vector3<T> v2, Vector3<T> v3) {
 			m[0][0] = v0.x, m[0][1] = v1.x, m[0][2] = v2.x;
 			m[1][0] = v0.y, m[1][1] = v1.y, m[1][2] = v2.y;
 			m[2][0] = v0.z, m[2][1] = v1.z, m[2][2] = v2.z;
+		}
+
+		Matrixf3x3 operator+(const Matrixf3x3& m) const {
+			Matrixf3x3 ans;
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					ans.m[i][j] = this->m[i][j] + m.m[i][j];
+				}
+			}
+			return ans;
 		}
 
 		template<typename T>
@@ -369,6 +380,16 @@ namespace myEigen {
 			m[1][0] = v0.y, m[1][1] = v1.y, m[1][2] = v2.y, m[1][3] = v3.y;
 			m[2][0] = v0.z, m[2][1] = v1.z, m[2][2] = v2.z, m[2][3] = v3.z;
 			m[3][0] = v0.w, m[3][1] = v1.w, m[3][2] = v2.w, m[3][3] = v3.w;
+		}
+
+		Matrixf4x4 operator+(const Matrixf4x4& m) const {
+			Matrixf4x4 ans;
+			for (int i = 0; i < 4; i++) {
+				for (int j = 0; j < 4; j++) {
+					ans.m[i][j] = this->m[i][j] + m.m[i][j];
+				}
+			}
+			return ans;
 		}
 
 		template<typename T>
@@ -460,9 +481,5 @@ namespace myEigen {
 	inline Matrixf4x4 Matrix4x4Identity() {
 		Matrixf4x4 m;
 		return m;
-	}
-
-	inline bool MatrixIsIdentity(Matrixf4x4 m) {
-		Matrixf4x4 n;
 	}
 }
