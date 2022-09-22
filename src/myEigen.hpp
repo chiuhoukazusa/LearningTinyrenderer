@@ -11,7 +11,7 @@ namespace myEigen {
 		Vector4() :x(0), y(0), z(0), w(0) {}
 		Vector4(T x) :x(x), y(x), z(x), w(x) {}
 		Vector4(T x, T y, T z, T w) :x(x), y(y), z(z), w(w) {}
-		Vector4<T>* operator=(const Vector4<T>& v) {
+		Vector4<T>& operator=(const Vector4<T>& v) {
 			x = v.x, y = v.y, z = v.z, w = v.w;
 			return *this;
 		}
@@ -65,7 +65,7 @@ namespace myEigen {
 			return std::sqrt(Norm());
 		}
 		Vector4<T>& Normalize() {
-			operator/=(Norm());
+			operator/=(Length());
 			return *this;
 		}
 		friend std::ostream& operator<<(std::ostream& os, const Vector4<T>& v) {
@@ -96,7 +96,7 @@ namespace myEigen {
 		Vector3():x(0), y(0), z(0){}
 		Vector3(T x):x(x), y(x), z(x){}
 		Vector3(T x, T y, T z) :x(x), y(y), z(z) {}
-		Vector3<T>* operator=(const Vector3<T>& v) {
+		Vector3<T>& operator=(const Vector3<T>& v) {
 			x = v.x, y = v.y, z = v.z;
 			return *this;
 		}
@@ -150,7 +150,7 @@ namespace myEigen {
 			return std::sqrt(Norm());
 		}
 		Vector3<T>& Normalize() {
-			operator/=(Norm());
+			operator/=(Length());
 			return *this;
 		}
 		friend std::ostream& operator<<(std::ostream& os, const Vector3<T>& v) {
@@ -191,7 +191,7 @@ namespace myEigen {
 		Vector2() :x(0), y(0) {}
 		Vector2(T x) :x(x), y(x) {}
 		Vector2(T x, T y) :x(x), y(y) {}
-		Vector2<T>* operator=(const Vector2<T>& v) {
+		Vector2<T>& operator=(const Vector2<T>& v) {
 			x = v.x, y = v.y;
 			return *this;
 		}
@@ -245,7 +245,7 @@ namespace myEigen {
 			return std::sqrt(Norm());
 		}
 		Vector2<T>& Normalize() {
-			operator/=(Norm());
+			operator/=(Length());
 			return *this;
 		}
 		friend std::ostream& operator<<(std::ostream& os, const Vector2<T>& v) {
@@ -306,10 +306,10 @@ namespace myEigen {
 		}
 
 		template<typename T>
-		Matrixf3x3 operator*(const Vector3<T>& v) const {
-			return Vector3<T>(m[0][0] * v.x, m[0][1] * v.y, m[0][2] * v.z,
-				m[1][0] * v.x, m[1][1] * v.y, m[1][2] * v.z,
-				m[2][0] * v.x, m[2][1] * v.y, m[2][2] * v.z);
+		Vector3<T> operator*(const Vector3<T>& v) const {
+			return Vector3<T>(m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z,
+				m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z,
+				m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z);
 		}
 
 		Matrixf3x3 operator*(const Matrixf3x3& m) const {
@@ -393,11 +393,11 @@ namespace myEigen {
 		}
 
 		template<typename T>
-		Matrixf4x4 operator*(const Vector4<T>& v) const {
-			return Vector4<T>(m[0][0] * v.x, m[0][1] * v.y, m[0][2] * v.z, m[0][3] * v.w,
-				m[1][0] * v.x, m[1][1] * v.y, m[1][2] * v.z, m[1][3] * v.w,
-				m[2][0] * v.x, m[2][1] * v.y, m[2][2] * v.z, m[2][3] * v.w,
-				m[3][0] * v.x, m[3][1] * v.y, m[3][2] * v.z, m[3][3] * v.w);
+		Vector4<T> operator*(const Vector4<T>& v) const {
+			return Vector4<T>(m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z + m[0][3] * v.w,
+				m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z + m[1][3] * v.w,
+				m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3] * v.w,
+				m[3][0] * v.x + m[3][1] * v.y + m[3][2] * v.z + m[3][3] * v.w);
 		}
 
 		Matrixf4x4 operator*(const Matrixf4x4& m) const {

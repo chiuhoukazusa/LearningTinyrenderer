@@ -1,0 +1,8 @@
+﻿  main.cpp
+E:\LearningTinyRenderer\src\myEigen.hpp(475,37): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+  正在生成代码
+  6 of 310 functions ( 1.9%) were compiled, the rest were copied from previous compilation.
+    1 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  已完成代码的生成
+  main.vcxproj -> E:\LearningTinyRenderer\x64\Release\main.exe

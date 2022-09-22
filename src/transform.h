@@ -17,19 +17,45 @@ namespace rst {
 		Transform(const myEigen::Matrixf4x4& m, const myEigen::Matrixf4x4& mInv) :m(m), mInv(myEigen::Matrix4x4Inverse(mInv)) {}
 
 		Transform operator*(const Transform& t) {
-			Transform ans(this->m * t.m);
+			Transform ans(this->m * t.m, myEigen::Matrix4x4Inverse(this->m * t.m));
 			return ans;
 		}
+
+		template<typename T>
+		myEigen::Vector3<T> operator()(const myEigen::Vector3<T>& v) const {
+			myEigen::Vector4<T> v1(v.x, v.y, v.z, 1);
+			v1 = m * v;
+			myEigen::Vector3<T> v2(v2.x, v2.y, v2.z);
+			return v2;
+		}
+		template<typename T>
+		myEigen::Vector4<T> operator()(const myEigen::Vector4<T>& v) const { return m * v; }
+		void toNormal();
+		void undo();
 
 	private:
 		myEigen::Matrixf4x4 m, mInv;
 	};
 
+
 	Transform Translate(const myEigen::Vector3f& delta);
 	Transform Scale(float x, float y, float z);
+	Transform Scale(const myEigen::Vector3f& scale);
 	Transform RotateX(float theta);
 	Transform RotateY(float theta);
 	Transform RotateZ(float theta);
 	Transform Rotate(const myEigen::Vector3f& axis, float theta);
+	Transform WolrdToNewCoordinate(const myEigen::Vector3f& newX, const myEigen::Vector3f& newY, const myEigen::Vector3f& newZ,
+		const myEigen::Vector3f& newZero);
+	Transform NewToWorldCoordinate(const myEigen::Vector3f& newX, const myEigen::Vector3f& newY, const myEigen::Vector3f& newZ,
+		const myEigen::Vector3f& newZero);
 
+	Transform Modeling(const myEigen::Vector3f& translate = (0),
+		const myEigen::Vector3f& scale = (1),
+		const myEigen::Vector3f& axis = (0), float theta = 0);
+	Transform Camera(const myEigen::Vector3f& eye_pos,const myEigen::Vector3f& gaze_dir,const myEigen::Vector3f& view_up);
+	Transform Orthographic(float left, float bottom, float near, float right, float top, float far);
+	Transform Orthographic(const myEigen::Vector3f& lbn, const myEigen::Vector3f& rtf);
+	Transform Perspective(float zneardis, float zfardis, float fovY, float aspect);
+	Transform Viewport(float width, float height);
 }
