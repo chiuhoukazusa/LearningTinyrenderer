@@ -1,3 +1,0 @@
-﻿  main.cpp
-E:\LearningTinyRenderer\src\myEigen.hpp(475,37): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
-  main.vcxproj -> E:\LearningTinyRenderer\x64\Debug\main.exe
