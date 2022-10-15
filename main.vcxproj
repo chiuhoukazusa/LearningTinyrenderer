@@ -149,7 +149,7 @@
     <ClCompile Include="src\rasterizer.cpp" />
     <ClCompile Include="src\tgaimage.cpp" />
     <ClCompile Include="src\transform.cpp" />
-    <ClCompile Include="src\triangle.cpp" />
+    <ClCompile Include="src\geometry.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\model.h" />
@@ -157,7 +157,7 @@
     <ClInclude Include="src\rasterizer.hpp" />
     <ClInclude Include="src\tgaimage.h" />
     <ClInclude Include="src\transform.h" />
-    <ClInclude Include="src\triangle.h" />
+    <ClInclude Include="src\geometry.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

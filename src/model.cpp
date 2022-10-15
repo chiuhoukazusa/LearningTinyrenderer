@@ -1,5 +1,5 @@
 #include "model.h"
-#include "triangle.h"
+#include "geometry.h"
 
 namespace rst {
 	model::model() {
