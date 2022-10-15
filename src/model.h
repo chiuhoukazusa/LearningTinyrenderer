@@ -1,5 +1,5 @@
 #pragma once
-#include "triangle.h"
+#include "geometry.h"
 
 namespace rst {
 	class  model

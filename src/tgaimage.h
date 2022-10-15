@@ -30,7 +30,21 @@ struct TGAColor {
         for (int i = bpp; i--; bgra[i] = p[i]);
     }
     std::uint8_t& operator[](const int i) { return bgra[i]; }
+
+    inline TGAColor operator+(const TGAColor& color) const {
+        return TGAColor(bgra[2] + color.bgra[2], bgra[1] + color.bgra[1], bgra[0] + color.bgra[0], bgra[3] + color.bgra[3]);
+    }
+    inline TGAColor operator*(const TGAColor& color) const {
+        return TGAColor(bgra[2] * color.bgra[2], bgra[1] * color.bgra[1], bgra[0] * color.bgra[0], bgra[3] * color.bgra[3]);
+    }
+    inline TGAColor operator*(const float t) const {
+        return TGAColor(bgra[2] * t, bgra[1] * t, bgra[0] * t, bgra[3] * t);
+    }
 };
+
+inline TGAColor ColorLerp(const TGAColor& color1, const TGAColor& color2, float t) {
+    return color1 * (1 - t) + color2 * t;
+}
 
 struct TGAImage {
     enum Format { GRAYSCALE = 1, RGB = 3, RGBA = 4 };

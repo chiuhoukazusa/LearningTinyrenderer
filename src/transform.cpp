@@ -139,9 +139,9 @@ namespace rst {
 
 	Transform Orthographic(float left, float bottom, float near, float right, float top, float far)
 	{
-		myEigen::Matrixf4x4 m(2.0f / abs(right - left), 0.0f, 0.0f, -(right + left) / abs(right - left),
-			0.0f, 2.0f / abs(top - bottom), 0.0f, -(top + bottom) / abs(top - bottom),
-			0.0f, 0.0f, 2.0f / abs(near - far), -(near + far) / abs(near - far),
+		myEigen::Matrixf4x4 m(2.0f / fabs(right - left), 0.0f, 0.0f, -(right + left) / fabs(right - left),
+			0.0f, 2.0f / fabs(top - bottom), 0.0f, -(top + bottom) / fabs(top - bottom),
+			0.0f, 0.0f, 2.0f / fabs(near - far), -(near + far) / fabs(near - far),
 			0.0f, 0.0f, 0.0f, 1.0f);
 		return Transform(m, myEigen::Matrix4x4Inverse(m));
 	}
@@ -154,9 +154,9 @@ namespace rst {
 		float right = rtf.x;
 		float top = rtf.y;
 		float far = rtf.z;
-		myEigen::Matrixf4x4 m(2.0f / abs(right - left), 0.0f, 0.0f, -(right + left) / abs(right - left),
-			0.0f, 2.0f / abs(top - bottom), 0.0f, -(top + bottom) / abs(top - bottom),
-			0.0f, 0.0f, 2.0f / abs(near - far), -(near + far) / abs(near - far),
+		myEigen::Matrixf4x4 m(2.0f / fabs(right - left), 0.0f, 0.0f, -(right + left) / fabs(right - left),
+			0.0f, 2.0f / fabs(top - bottom), 0.0f, -(top + bottom) / fabs(top - bottom),
+			0.0f, 0.0f, 2.0f / fabs(near - far), -(near + far) / fabs(near - far),
 			0.0f, 0.0f, 0.0f, 1.0f);
 		return Transform(m, myEigen::Matrix4x4Inverse(m));
 	}
@@ -173,7 +173,7 @@ namespace rst {
 			0.0f, 0.0f, 1.0f, 0.0f);
 		Transform per(m);
 
-		float t = std::tan(ffovY / 2) * abs(n);
+		float t = std::tan(ffovY / 2) * fabs(n);
 		float b = -t;
 		float r = aspect * t;
 		float l = -r;

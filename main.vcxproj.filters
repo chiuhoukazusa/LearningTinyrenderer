@@ -30,7 +30,7 @@
     <ClCompile Include="src\transform.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\triangle.cpp">
+    <ClCompile Include="src\geometry.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\model.cpp">
@@ -50,7 +50,7 @@
     <ClInclude Include="src\transform.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\triangle.h">
+    <ClInclude Include="src\geometry.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\model.h">
