@@ -45,7 +45,6 @@ namespace rst {
 	{
 		Vertex v1;
 		Vertex v2;
-		bool isNull = false;
 
 		Line() :isNull(true){}
 		Line(const Vertex& v1, const Vertex& v2) :v1(v1), v2(v2) {}
