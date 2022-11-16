@@ -45,10 +45,14 @@ namespace rst {
 	{
 		Vertex v1;
 		Vertex v2;
-		bool isNull = false;
 
 		Line() :isNull(true){}
 		Line(const Vertex& v1, const Vertex& v2) :v1(v1), v2(v2) {}
+		Line(const Vertex& v1, const Vertex& v2, const bool isNull) :v1(v1), v2(v2), isNull(isNull) {}
+		bool empty() { return isNull; }
+
+	private:
+		bool isNull = false;
 	};
 
 	struct Triangle {
