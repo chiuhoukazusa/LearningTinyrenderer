@@ -2,6 +2,7 @@
 #include "rasterizer.hpp"
 #include "myEigen.hpp"
 #include "geometry.h"
+#include "objLoader.h"
 #include <string>
 #include <chrono>
 #include <random>
@@ -30,7 +31,7 @@ int main(int argc, char** argv) {
         t1->setColor(0, TGAColor(255, 0, 0));
         t1->setColor(1, TGAColor(0, 255, 0));
         t1->setColor(2, TGAColor(0, 0, 255));
-        TriangleList.push_back(t1);
+        //TriangleList.push_back(t1);
     }
     {
         myEigen::Vector3f v[3];
@@ -41,6 +42,13 @@ int main(int argc, char** argv) {
         t1->setColor(0, TGAColor(255, 0, 0));
         t1->setColor(1, TGAColor(0, 255, 0));
         t1->setColor(2, TGAColor(0, 0, 255));
+        //TriangleList.push_back(t1);
+    }
+
+    Model model("obj\\mary\\marry.obj");
+    for (auto t : model.meshes)
+    {
+        std::shared_ptr<rst::Triangle> t1(new rst::Triangle(t));
         TriangleList.push_back(t1);
     }
 

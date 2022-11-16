@@ -31,7 +31,7 @@ namespace rst {
 		dya = abs(dy);
 		px = 2 * dya - dxa;
 		py = 2 * dxa - dya;
-		image.set(x, y, red);
+		image.set(x, y, white);
 		if (dya < dxa) {
 			if (dx > 0) {
 				x = v0.x;
@@ -60,7 +60,7 @@ namespace rst {
 				{
 					px += 2 * dya;
 				}
-				image.set(x, y, red);
+				image.set(x, y, white);
 			}
 		}
 		else
@@ -92,7 +92,7 @@ namespace rst {
 				{
 					py += 2 * dxa;
 				}
-				image.set(x, y, red);
+				image.set(x, y, white);
 			}
 		}
 	}
@@ -223,12 +223,13 @@ namespace rst {
 
 			//Viewport Clipping
 			auto NewVert = clip_Cohen_Sutherland(NewTriangle, clipSpacePos);
-			
+			if (NewVert.size() == 0) return;
+
 			for (size_t i = 0; i < NewVert.size() - 2; i++)
 			{
-				rasterize_edge_walking(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), clipSpacePos);
+				//rasterize_edge_walking(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), clipSpacePos);
 				//rasterize_edge_equation(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), clipSpacePos);
-				//rasterize_wireframe(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]));
+				rasterize_wireframe(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]));
 			}
 			
 			//rasterize_edge_walking(NewTriangle, clipSpacePos);
@@ -310,9 +311,13 @@ namespace rst {
 
 		while (code[0] != 0 || code[1] != 0)
 		{
-			if ((code[0] & code[1]) != 0) return Line();
+			if ((code[0] & code[1]) != 0) return Line(vert1, vert2, true);
 			vert1 = clip_vert(vert1, vert2, code[0], code[1], 0, width, 0, height, { clipSpacePos[0], clipSpacePos[1] });
 			vert2 = clip_vert(vert2, vert1, code[1], code[0], 0, width, 0, height, { clipSpacePos[1], clipSpacePos[0] });
+		}
+		if (vert1.vertex.x == 0 && vert1.vertex.y == 0 || vert2.vertex.x == 0 && vert2.vertex.y == 0)
+		{
+			std::cout << v[0].vertex << v[1].vertex << std::endl;
 		}
 		return Line(vert1, vert2);
 	}
@@ -333,7 +338,7 @@ namespace rst {
 		line[1] = clip_line(line[1], { clipSpacePos[1], clipSpacePos[2] });
 		line[2] = clip_line(line[2], { clipSpacePos[2], clipSpacePos[0] });
 
-		for (size_t i = 0; i < 2; i++)
+		for (size_t i = 0; i < 3; i++)
 		{
 			if (line[i].isNull)
 			{
@@ -353,7 +358,6 @@ namespace rst {
 				}
 			}
 		}
-
 		std::vector<Vertex> newVert;
 		newVert.reserve(3);
 
@@ -383,6 +387,27 @@ namespace rst {
 		{
 			newVert.emplace_back(line[1].v2);
 			newVert.emplace_back(line[2].v1);
+		}
+
+		for (auto i : newVert)
+		{
+			int u = 0;
+			for (auto a : newVert) {
+				if (i.vertex.x == 0 && i.vertex.y == 0) { u++; }
+			}
+			if (u == newVert.size()) continue;
+			if (i.vertex.x == 0 && i.vertex.y == 0)
+			{
+				std::cout << "²Ã¼ôÇ°" << "vert1:" << t.vertex[0].vertex << std::endl;
+				std::cout << "²Ã¼ôÇ°" << "vert2:" << t.vertex[1].vertex << std::endl;
+				std::cout << "²Ã¼ôÇ°" << "vert3:" << t.vertex[2].vertex << std::endl;
+				int q = 0;
+				for (auto w : newVert)
+				{
+					q++;
+					std::cout << "²Ã¼ôºó" << "vert" << q << ":" << myEigen::Vector3f(w.vertex.x, w.vertex.y, w.vertex.z) << std::endl;
+				}
+			}
 		}
 
 		return newVert;

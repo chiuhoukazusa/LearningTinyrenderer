@@ -146,6 +146,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\model.cpp" />
     <ClCompile Include="src\myEigen.cpp" />
+    <ClCompile Include="src\objLoader.cpp" />
     <ClCompile Include="src\rasterizer.cpp" />
     <ClCompile Include="src\tgaimage.cpp" />
     <ClCompile Include="src\transform.cpp" />
@@ -154,6 +155,7 @@
   <ItemGroup>
     <ClInclude Include="src\model.h" />
     <ClInclude Include="src\myEigen.hpp" />
+    <ClInclude Include="src\objLoader.h" />
     <ClInclude Include="src\rasterizer.hpp" />
     <ClInclude Include="src\tgaimage.h" />
     <ClInclude Include="src\transform.h" />

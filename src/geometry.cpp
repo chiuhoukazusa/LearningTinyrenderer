@@ -1,5 +1,4 @@
 #include "geometry.h"
-#include "myEigen.hpp"
 #include <array>
 
 namespace rst {

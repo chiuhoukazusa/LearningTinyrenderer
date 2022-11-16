@@ -1,5 +1,4 @@
 #include "transform.h"
-#include "myEigen.hpp"
 
 namespace rst {
 	constexpr float MY_PI = 3.14159265359f;

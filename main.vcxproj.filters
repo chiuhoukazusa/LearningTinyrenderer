@@ -36,6 +36,9 @@
     <ClCompile Include="src\model.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="src\objLoader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\tgaimage.h">
@@ -54,6 +57,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\model.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\objLoader.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
