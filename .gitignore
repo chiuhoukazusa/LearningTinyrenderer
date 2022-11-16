@@ -5,5 +5,9 @@
 /.vs
 /x64
 /Debug
+<<<<<<< HEAD
 /obj
 /result
+=======
+/obj
+>>>>>>> b9e7d2600dd8f36529ffdf57d3cf95d89736c48c
