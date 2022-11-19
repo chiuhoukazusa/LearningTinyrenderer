@@ -223,8 +223,8 @@ namespace rst {
 
 			//Viewport Clipping
 			auto NewVert = clip_Cohen_Sutherland(NewTriangle, clipSpacePos);
-			if (NewVert.size() == 0) return;
-
+			if (NewVert.empty()) return;
+			
 			for (size_t i = 0; i < NewVert.size() - 2; i++)
 			{
 				//rasterize_edge_walking(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), clipSpacePos);
@@ -311,13 +311,9 @@ namespace rst {
 
 		while (code[0] != 0 || code[1] != 0)
 		{
-			if ((code[0] & code[1]) != 0) return Line(vert1, vert2, true);
+			if ((code[0] & code[1]) != 0) return Line();
 			vert1 = clip_vert(vert1, vert2, code[0], code[1], 0, width, 0, height, { clipSpacePos[0], clipSpacePos[1] });
 			vert2 = clip_vert(vert2, vert1, code[1], code[0], 0, width, 0, height, { clipSpacePos[1], clipSpacePos[0] });
-		}
-		if (vert1.vertex.x == 0 && vert1.vertex.y == 0 || vert2.vertex.x == 0 && vert2.vertex.y == 0)
-		{
-			std::cout << v[0].vertex << v[1].vertex << std::endl;
 		}
 		return Line(vert1, vert2);
 	}
@@ -338,28 +334,41 @@ namespace rst {
 		line[1] = clip_line(line[1], { clipSpacePos[1], clipSpacePos[2] });
 		line[2] = clip_line(line[2], { clipSpacePos[2], clipSpacePos[0] });
 
-		for (size_t i = 0; i < 3; i++)
+		int cnt = 0;
+		for (auto& i : line) { if (i.empty()) cnt++; }
+
+		if (cnt == 3) return {};
+		else if (cnt == 2)
 		{
-			if (line[i].isNull)
+			return {};
+		}
+		else if (cnt == 1)
+		{
+			for (size_t i = 0; i < 3; i++)
 			{
-				if (i == 0) {
-					line[i].v1 = line[2].v2;
-					line[i].v2 = line[1].v1;
-				}
-				else if (i == 1)
+				if (line[i].empty())
 				{
-					line[i].v1 = line[0].v2;
-					line[i].v2 = line[2].v1;
-				}
-				else if (i == 2)
-				{
-					line[i].v1 = line[1].v2;
-					line[i].v2 = line[0].v1;
+					if (i == 0) {
+						line[i].v1 = line[2].v2;
+						line[i].v2 = line[1].v1;
+					}
+					else if (i == 1)
+					{
+						line[i].v1 = line[0].v2;
+						line[i].v2 = line[2].v1;
+					}
+					else if (i == 2)
+					{
+						line[i].v1 = line[1].v2;
+						line[i].v2 = line[0].v1;
+					}
 				}
 			}
 		}
+
+
 		std::vector<Vertex> newVert;
-		newVert.reserve(3);
+		newVert.reserve(6);
 
 		if (fabs(line[2].v2.vertex.x - line[0].v1.vertex.x) < 0.0001f && fabs(line[2].v2.vertex.y - line[0].v1.vertex.y) < 0.0001f)
 		{
