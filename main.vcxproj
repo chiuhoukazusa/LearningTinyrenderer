@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\material.cpp" />
     <ClCompile Include="src\model.cpp" />
     <ClCompile Include="src\myEigen.cpp" />
     <ClCompile Include="src\objLoader.cpp" />
@@ -153,6 +154,7 @@
     <ClCompile Include="src\geometry.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\material.h" />
     <ClInclude Include="src\model.h" />
     <ClInclude Include="src\myEigen.hpp" />
     <ClInclude Include="src\objLoader.h" />

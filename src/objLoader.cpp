@@ -2,53 +2,91 @@
 #include <fstream>
 #include <sstream>
 
-Model::Model(std::string filename)
+namespace rst
 {
-	std::ifstream in;
-	in.open(filename, std::ifstream::in);
-	if (in.fail())
+	Model::Model(const std::string& root, const std::string& filename)
 	{
-		std::cerr << "Cannot open:" << filename << std::endl;
-		return;
-	}
-	std::string line;
-	while (!in.eof())
-	{
-		std::getline(in, line);
-		std::istringstream s(line);
-		std::string header;
-		char trash;
-		if (line.compare(0, 2, "v ") == 0)
+		std::ifstream obj;
+		std::string mtlfilename;
+		obj.open(root + filename, std::ifstream::in);
+		if (obj.fail())
 		{
-			float x, y, z;
-			s >> header;
-			s >> x >> y >> z;
-			verts.push_back(myEigen::Vector3f(x, y, z));
+			std::cerr << "Cannot open:" << filename << std::endl;
+			return;
 		}
-		else if (line.compare(0, 3, "vt ") == 0)
+		std::string objLine;
+		std::string mtlLine;
+		while (!obj.eof())
 		{
-			float x, y;
-			s >> header;
-			s >> x >> y;
-			texcoords.push_back(myEigen::Vector2f(x, y));
-		}
-		else if (line.compare(0, 3, "vn ") == 0)
-		{
-			float x, y, z;
-			s >> header;
-			s >> x >> y >> z;
-			normals.push_back(myEigen::Vector3f(x, y, z));
-		}
-		else if(line.compare(0, 2, "f ") == 0)
-		{
-			int v[3], vt[3], vn[3];
-			s >> header;
-			for (size_t i = 0; i < 3; i++)
+			std::getline(obj, objLine);
+			std::istringstream s(objLine);
+			std::string header;
+			char trash;
+			int cur_obj = objects.size() - 1;
+			int cur_mesh;
+			if(!objects.empty()) cur_mesh = objects[cur_obj].meshes.size() - 1;
+			if (objLine.compare(0, 7, "mtllib ") == 0)
 			{
-				s >> v[i] >> trash >> vt[i] >> trash >> vn[i];
+				s >> header;
+				s >> mtlfilename;
+				mtlfilename = root + mtlfilename;
 			}
-			myEigen::Vector3f vertex[3]{ verts[v[0] - 1], verts[v[1] - 1], verts[v[2] - 1] };
-			meshes.push_back(rst::Triangle(vertex));
+			else if(objLine.compare(0, 2, "o ") == 0)
+			{
+				s >> header >> header;
+				objects.push_back(Object());
+			}
+			else if (objLine.compare(0, 2, "v ") == 0)
+			{
+				if (objects.empty())
+				{
+					objects.push_back(Object());
+				}
+				float x, y, z;
+				s >> header;
+				s >> x >> y >> z;
+				verts.push_back(myEigen::Vector3f(x, y, z));
+			}
+			else if (objLine.compare(0, 3, "vt ") == 0)
+			{
+				float x, y;
+				s >> header;
+				s >> x >> y;
+				texcoords.push_back(myEigen::Vector2f(x, y));
+			}
+			else if (objLine.compare(0, 3, "vn ") == 0)
+			{
+				float x, y, z;
+				s >> header;
+				s >> x >> y >> z;
+				normals.push_back(myEigen::Vector3f(x, y, z));
+			}
+			else if (objLine.compare(0, 7, "usemtl ") == 0)
+			{
+				std::string materialName;
+				s >> header;
+				s >> materialName;
+				Mesh mesh(mtlfilename, materialName);
+				objects[cur_obj].meshes.push_back(mesh);
+			}
+			else if (objLine.compare(0, 2, "f ") == 0)
+			{
+				int v[3], vt[3], vn[3];
+				s >> header;
+				for (size_t i = 0; i < 3; i++)
+				{
+					s >> v[i] >> trash >> vt[i] >> trash >> vn[i];
+				}
+				myEigen::Vector3f vertex[3]
+				{ 
+					verts[v[0] - 1],
+					verts[v[1] - 1],
+					verts[v[2] - 1]
+				};
+				objects[cur_obj].meshes[cur_mesh].primitives.push_back(Triangle(vertex));
+			}
 		}
+		obj.close();
+
 	}
 }

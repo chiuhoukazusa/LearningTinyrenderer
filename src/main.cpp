@@ -22,45 +22,32 @@ int main(int argc, char** argv) {
 
     std::vector<std::shared_ptr<rst::Triangle>> TriangleList;
 
+    //std::string root = "obj/Elden Ring - Melina_XPS/";
+    //rst::Model model(root, "Melina.obj");
+    std::string root = "obj/mary/";
+    rst::Model model(root, "Marry.obj");
+    for (auto& o:model.objects)
     {
-        myEigen::Vector3f v[3];
-        v[0] = myEigen::Vector3f(2, 0, -2);
-        v[1] = myEigen::Vector3f(0, 2, -2);
-        v[2] = myEigen::Vector3f(-2, 0, -2);
-        std::shared_ptr<rst::Triangle> t1(new rst::Triangle(v));
-        t1->setColor(0, TGAColor(255, 0, 0));
-        t1->setColor(1, TGAColor(0, 255, 0));
-        t1->setColor(2, TGAColor(0, 0, 255));
-        //TriangleList.push_back(t1);
-    }
-    {
-        myEigen::Vector3f v[3];
-        v[0] = myEigen::Vector3f(3.5, -1, -5);
-        v[1] = myEigen::Vector3f(2.5, 1.5, -5);
-        v[2] = myEigen::Vector3f(-1, 0.5, -5);
-        std::shared_ptr<rst::Triangle> t1(new rst::Triangle(v));
-        t1->setColor(0, TGAColor(255, 0, 0));
-        t1->setColor(1, TGAColor(0, 255, 0));
-        t1->setColor(2, TGAColor(0, 0, 255));
-        //TriangleList.push_back(t1);
-    }
-
-    Model model("obj\\mary\\marry.obj");
-    for (auto t : model.meshes)
-    {
-        std::shared_ptr<rst::Triangle> t1(new rst::Triangle(t));
-        TriangleList.push_back(t1);
+        for (auto& m : o.meshes)
+        {
+            for (auto& t : m.primitives)
+            {
+                std::shared_ptr<rst::Triangle> t1(new rst::Triangle(t));
+                TriangleList.push_back(t1);
+            }
+        }
     }
 
     while (true)
     {
-        std::string filename = "result\\output" + std::to_string(frame);
+        std::string filename = "result/output" + std::to_string(frame);
         TGAImage image(700, 700, TGAImage::RGB);
         
         rst::rasterizer rst(filename, image);
-        rst.SetCamera(myEigen::Vector3f(0, 0, 5));
+        rst.SetCamera(myEigen::Vector3f(0, 1.8, 5));
+        //rst.SetCamera(myEigen::Vector3f(0, 0.8, 2.5));
         rst.SetTheta(angle);
-        rst.SetRotateAxis(myEigen::Vector3f(1, 1, 0));
+        rst.SetRotateAxis(myEigen::Vector3f(0, 1, 0));
         //rst.TurnOnBackCulling();
         rst.draw(TriangleList);
         rst.output();

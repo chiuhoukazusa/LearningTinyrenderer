@@ -198,7 +198,7 @@ namespace rst {
 			//Homogeneous Clipping 
 			for (auto& v : vert)
 			{
-				if (v.w > -zneardis || v.w < -zfardis) return;
+				if (v.w > -zneardis || v.w < -zfardis) continue;
 			}
 			auto clipSpacePos = vert;
 
@@ -223,7 +223,7 @@ namespace rst {
 
 			//Viewport Clipping
 			auto NewVert = clip_Cohen_Sutherland(NewTriangle, clipSpacePos);
-			if (NewVert.empty()) return;
+			if (NewVert.empty()) continue;
 			
 			for (size_t i = 0; i < NewVert.size() - 2; i++)
 			{
@@ -338,7 +338,7 @@ namespace rst {
 		for (auto& i : line) { if (i.empty()) cnt++; }
 
 		if (cnt == 3) return {};
-		else if (cnt == 2)
+		if (cnt == 2)
 		{
 			return {};
 		}
