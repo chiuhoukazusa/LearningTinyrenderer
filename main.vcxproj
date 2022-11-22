@@ -149,6 +149,7 @@
     <ClCompile Include="src\myEigen.cpp" />
     <ClCompile Include="src\objLoader.cpp" />
     <ClCompile Include="src\rasterizer.cpp" />
+    <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\tgaimage.cpp" />
     <ClCompile Include="src\transform.cpp" />
     <ClCompile Include="src\geometry.cpp" />
@@ -159,6 +160,7 @@
     <ClInclude Include="src\myEigen.hpp" />
     <ClInclude Include="src\objLoader.h" />
     <ClInclude Include="src\rasterizer.hpp" />
+    <ClInclude Include="src\shader.h" />
     <ClInclude Include="src\tgaimage.h" />
     <ClInclude Include="src\transform.h" />
     <ClInclude Include="src\geometry.h" />

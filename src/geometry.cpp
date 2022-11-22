@@ -57,6 +57,11 @@ namespace rst {
 		}
 	}
 
+	Triangle::Triangle(Vertex v[3])
+	{
+		setVertex(v);
+	}
+
 	Triangle::Triangle(const Vertex& v1, const Vertex& v2, const Vertex& v3)
 	{
 		vertex[0] = v1;

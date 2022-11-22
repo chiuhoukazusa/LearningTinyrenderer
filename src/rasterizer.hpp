@@ -4,6 +4,8 @@
 #include "transform.h"
 #include "geometry.h"
 #include "model.h"
+#include "shader.h"
+#include <functional>
 
 namespace rst {
 
@@ -15,7 +17,7 @@ namespace rst {
 
 	class rasterizer {
 		public:
-			rasterizer(const std::string& filename, const TGAImage &image);
+			rasterizer(const std::string& filename, const TGAImage &image, const PointLight& light);
 			void draw_line(const myEigen::Vector2i&, const myEigen::Vector2i&);
 			void output();
 
@@ -30,6 +32,7 @@ namespace rst {
 			void SetVertexOrder(const TriangleVertexOrder& t);
 			TriangleVertexOrder GetVertexOrder();
 			void draw(std::vector<std::shared_ptr<rst::Triangle>>& TriangleList);
+			void setFragmentShader(std::function<Vertex(fragmentShaderPayload)> fragmentShader);
 		private:
 			std::vector<Vertex> clip_Cohen_Sutherland(const Triangle& t, const std::array<myEigen::Vector4f, 3>& clipSpacePos);
 			Line clip_line(const Line& line, const std::array<myEigen::Vector4f, 2>& clipSpacePos);
@@ -57,6 +60,8 @@ namespace rst {
 			float aspect;
 			float theta;
 
+			PointLight light;
+			std::function<Vertex(fragmentShaderPayload)> fragmentShader;
 			std::vector<float> z_buffer;
 			int get_index(int x, int y);
 	};

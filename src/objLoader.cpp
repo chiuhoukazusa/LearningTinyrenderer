@@ -15,7 +15,6 @@ namespace rst
 			return;
 		}
 		std::string objLine;
-		std::string mtlLine;
 		while (!obj.eof())
 		{
 			std::getline(obj, objLine);
@@ -77,11 +76,11 @@ namespace rst
 				{
 					s >> v[i] >> trash >> vt[i] >> trash >> vn[i];
 				}
-				myEigen::Vector3f vertex[3]
+				Vertex vertex[3]
 				{ 
-					verts[v[0] - 1],
-					verts[v[1] - 1],
-					verts[v[2] - 1]
+					Vertex(verts[v[0] - 1], TGAColor(255, 255, 255), normals[vn[0] - 1], texcoords[vt[0] - 1]),
+					Vertex(verts[v[1] - 1], TGAColor(255, 255, 255), normals[vn[1] - 1], texcoords[vt[1] - 1]),
+					Vertex(verts[v[2] - 1], TGAColor(255, 255, 255), normals[vn[2] - 1], texcoords[vt[2] - 1])
 				};
 				objects[cur_obj].meshes[cur_mesh].primitives.push_back(Triangle(vertex));
 			}

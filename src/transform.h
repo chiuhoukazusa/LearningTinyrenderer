@@ -24,8 +24,8 @@ namespace rst {
 		template<typename T>
 		myEigen::Vector3<T> operator()(const myEigen::Vector3<T>& v) const {
 			myEigen::Vector4<T> v1(v.x, v.y, v.z, 1);
-			v1 = m * v;
-			myEigen::Vector3<T> v2(v2.x, v2.y, v2.z);
+			v1 = m * v1;
+			myEigen::Vector3<T> v2(v1.x, v1.y, v1.z);
 			return v2;
 		}
 		template<typename T>

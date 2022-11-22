@@ -8,9 +8,9 @@
 #include <algorithm>
 
 namespace rst {
-	rasterizer::rasterizer(const std::string& f, const TGAImage& img)
+	rasterizer::rasterizer(const std::string& f, const TGAImage& img, const PointLight& light)
 		:filename(f), image(img), width(img.width()), height(img.height()),
-		zneardis(0.1f), zfardis(50), fovY(45), aspect(1)
+		zneardis(0.1f), zfardis(50), fovY(45), aspect(1), light(light)
 	{
 		image.flip_vertically(); /*让坐标原点位于图像左下角*/
 
@@ -138,6 +138,10 @@ namespace rst {
 		auto v = this->vertexOrder;
 		return v;
 	}
+	void rasterizer::setFragmentShader(std::function<Vertex(fragmentShaderPayload)> fragmentShader)
+	{
+		this->fragmentShader = fragmentShader;
+	}
 	int rasterizer::get_index(int x, int y)
 	{
 		return y * width + x;
@@ -224,12 +228,12 @@ namespace rst {
 			//Viewport Clipping
 			auto NewVert = clip_Cohen_Sutherland(NewTriangle, clipSpacePos);
 			if (NewVert.empty()) continue;
-			
+
 			for (size_t i = 0; i < NewVert.size() - 2; i++)
 			{
-				//rasterize_edge_walking(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), clipSpacePos);
+				rasterize_edge_walking(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), clipSpacePos);
 				//rasterize_edge_equation(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), clipSpacePos);
-				rasterize_wireframe(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]));
+				//rasterize_wireframe(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]));
 			}
 			
 			//rasterize_edge_walking(NewTriangle, clipSpacePos);
@@ -398,27 +402,6 @@ namespace rst {
 			newVert.emplace_back(line[2].v1);
 		}
 
-		for (auto i : newVert)
-		{
-			int u = 0;
-			for (auto a : newVert) {
-				if (i.vertex.x == 0 && i.vertex.y == 0) { u++; }
-			}
-			if (u == newVert.size()) continue;
-			if (i.vertex.x == 0 && i.vertex.y == 0)
-			{
-				std::cout << "裁剪前" << "vert1:" << t.vertex[0].vertex << std::endl;
-				std::cout << "裁剪前" << "vert2:" << t.vertex[1].vertex << std::endl;
-				std::cout << "裁剪前" << "vert3:" << t.vertex[2].vertex << std::endl;
-				int q = 0;
-				for (auto w : newVert)
-				{
-					q++;
-					std::cout << "裁剪后" << "vert" << q << ":" << myEigen::Vector3f(w.vertex.x, w.vertex.y, w.vertex.z) << std::endl;
-				}
-			}
-		}
-
 		return newVert;
 	}
 
@@ -464,6 +447,10 @@ namespace rst {
 			{
 				float lerpNumber = ((float)i + 0.5f - shortVertex.vertex.x) / (longVertex.vertex.x - shortVertex.vertex.x);
 				Vertex pixel = perspectiveLerp(shortVertex, longVertex, lerpNumber, shortVertexC.vertex, longVertexC.vertex);
+
+				fragmentShaderPayload payload(pixel, light);
+				pixel = BlinnPhongShader(payload);
+
 				if (pixel.vertex.z > z_buffer[get_index(i, y)])
 				{
 					image.set(i, y, pixel.vertexColor);
@@ -490,6 +477,10 @@ namespace rst {
 			{
 				float lerpNumber = ((float)i + 0.5f - shortVertex.vertex.x) / (longVertex.vertex.x - shortVertex.vertex.x);
 				Vertex pixel = perspectiveLerp(shortVertex, longVertex, lerpNumber, shortVertexC.vertex, longVertexC.vertex);
+
+				fragmentShaderPayload payload(pixel, light);
+				pixel = BlinnPhongShader(payload);
+
 				if (pixel.vertex.z > z_buffer[get_index(i, y)])
 				{
 					image.set(i, y, pixel.vertexColor);

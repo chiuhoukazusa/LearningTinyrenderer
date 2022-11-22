@@ -8,21 +8,33 @@ namespace rst {
 		myEigen::Vector4f vertex;
 		TGAColor vertexColor;
 		myEigen::Vector4f normal;
+		myEigen::Vector2f texcoord;
 		Vertex() :
-			vertex(), vertexColor(), normal() {}
-		Vertex(myEigen::Vector4f vertex, TGAColor vertexColor, myEigen::Vector4f normal) :
-			vertex(vertex), vertexColor(vertexColor), normal(normal) {}
+			vertex(), vertexColor(), normal(), texcoord() {}
+		Vertex(const myEigen::Vector4f& vertex,
+			const TGAColor& vertexColor,
+			const myEigen::Vector4f& normal,
+			const myEigen::Vector2f& texcoord) :
+			vertex(vertex), vertexColor(vertexColor), normal(normal), texcoord(texcoord) {}
+
+		Vertex(const myEigen::Vector3f& vertex,
+			const TGAColor& vertexColor,
+			const myEigen::Vector3f& normal,
+			const myEigen::Vector2f& texcoord) :
+			vertex(vertex.x, vertex.y, vertex.z, 1), vertexColor(vertexColor),
+			normal(normal.x, normal.y, normal.z, 0), texcoord(texcoord) {}
 		
 		Vertex operator+(const Vertex& v) const {
-			return Vertex(vertex + v.vertex, vertexColor + v.vertexColor, normal + v.normal);
+			return Vertex(vertex + v.vertex, vertexColor + v.vertexColor, normal + v.normal, texcoord + v.texcoord);
 		}
 		Vertex operator*(const float x) const {
-			return Vertex(vertex * x, vertexColor * x, normal * x);
+			return Vertex(vertex * x, vertexColor * x, normal * x, texcoord * x);
 		}
 		Vertex& operator=(const Vertex& v) {
 			vertex = v.vertex;
 			vertexColor = v.vertexColor;
 			normal = v.normal;
+			texcoord = v.texcoord;
 			return *this;
 		}
 	};
@@ -31,7 +43,8 @@ namespace rst {
 		return Vertex{
 			lerp(v1.vertex, v2.vertex, t),
 			ColorLerp(v1.vertexColor, v2.vertexColor, t),
-			lerp(v1.normal, v2.normal, t)
+			lerp(v1.normal, v2.normal, t),
+			lerp(v1.texcoord, v2.texcoord, t)
 		};
 	}
 	inline Vertex perspectiveLerp(const Vertex& v1, const Vertex& v2, const float t,
@@ -61,6 +74,7 @@ namespace rst {
 
 		Triangle();
 		Triangle(myEigen::Vector3f v[3]);
+		Triangle(Vertex v[3]);
 		Triangle(const Vertex& v1, const Vertex& v2, const Vertex& v3);
 
 		void setVertex(int index, const Vertex& v);
