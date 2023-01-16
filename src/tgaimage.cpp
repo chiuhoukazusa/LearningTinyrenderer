@@ -53,7 +53,7 @@ bool TGAImage::read_tga_file(const std::string filename) {
         flip_vertically();
     if (header.imagedescriptor & 0x10)
         flip_horizontally();
-    std::cerr << w << "x" << h << "/" << bpp * 8 << "\n";
+    std::cerr << (int)header.datatypecode << "/" << w << "x" << h << "/" << bpp * 8 << "\n";
     in.close();
     return true;
 }
@@ -239,4 +239,9 @@ int TGAImage::width() const {
 
 int TGAImage::height() const {
     return h;
+}
+
+bool TGAImage::empty() const {
+    if (w == 0 && h == 0 && bpp == 0) return true;
+    return false;
 }

@@ -5,186 +5,6 @@
 
 namespace myEigen {
 	template<typename T>
-	class Vector4 {
-	public:
-		T x, y, z, w;
-		Vector4() :x(0), y(0), z(0), w(0) {}
-		Vector4(T x) :x(x), y(x), z(x), w(x) {}
-		Vector4(T x, T y, T z, T w) :x(x), y(y), z(z), w(w) {}
-		Vector4<T>& operator=(const Vector4<T>& v) {
-			x = v.x, y = v.y, z = v.z, w = v.w;
-			return *this;
-		}
-		Vector4<T> operator+(const Vector4<T>& v) const {
-			return Vector4(x + v.x, y + v.y, z + v.z, w + v.w);
-		}
-		Vector4<T>& operator+=(const Vector4<T>& v) {
-			x += v.x, y += v.y, z += v.z, w += v.w;
-			return *this;
-		}
-		Vector4<T> operator-(const Vector4<T>& v) const {
-			return Vector4(x - v.x, y - v.y, z - v.z, w - v.w);
-		}
-		Vector4<T>& operator-=(const Vector4<T>& v) {
-			x -= v.x, y -= v.y, z -= v.z, w -= v.w;
-			return *this;
-		}
-		Vector4<T> operator-() const {
-			return Vector4<T>(-x, -y, -z, -w);
-		}
-		template<typename U>
-		Vector4<T> operator*(U s) const {
-			return Vector4<T>(x * s, y * s, z * s, w * s);
-		}
-		template<>
-		Vector4<T> operator*(const Vector4<T>& v) const {
-			return Vector3<T>(x * v.x, y * v.y, z * v.z, w * v.w);
-		}
-		template<typename U>
-		Vector4<T>& operator*=(U s) {
-			x *= s, y *= s, z *= s, w *= s;
-			return *this;
-		}
-		template<typename U>
-		Vector4<T> operator/(U s) const {
-			return Vector4<T>(x / s, y / s, z / s, w / s);
-		}
-		template<>
-		Vector4<T> operator/(Vector4<T> v) const {
-			return Vector4<T>(x / v.x, y / v.y, z / v.z, w / v.w);
-		}
-		template<typename U>
-		Vector4<T>& operator/=(U s) {
-			x /= s, y /= s, z /= s, w /= s;
-			return *this;
-		}
-		float Norm() const {
-			return x * x + y * y + z * z + w * w;
-		}
-		float Length() const {
-			return std::sqrt(Norm());
-		}
-		Vector4<T>& Normalize() {
-			operator/=(Length());
-			return *this;
-		}
-		friend std::ostream& operator<<(std::ostream& os, const Vector4<T>& v) {
-			return os << v.x << "," << v.y << "," << v.z << "," << v.w;
-		}
-		friend Vector4<T> operator*(const T& r, const Vector4<T>& v) {
-			return Vector4<T> * r;
-		}
-	};
-
-	template<typename T>
-	inline T dotProduct(const Vector4<T>& a, const Vector4<T>& b) {
-		return (a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w);
-	}
-
-	template<typename T>
-	inline Vector4<T> lerp(const Vector4<T>& a, const Vector4<T>& b, const float& t) {
-		return a * (1 - t) + b * t;
-	}
-
-	typedef Vector4<float> Vector4f;
-	typedef Vector4<int> Vector4i;
-
-	template<typename T>
-	class Vector3 {
-	public:
-		T x, y, z;
-		Vector3():x(0), y(0), z(0){}
-		Vector3(T x):x(x), y(x), z(x){}
-		Vector3(T x, T y, T z) :x(x), y(y), z(z) {}
-		Vector3<T>& operator=(const Vector3<T>& v) {
-			x = v.x, y = v.y, z = v.z;
-			return *this;
-		}
-		Vector3<T> operator+(const Vector3<T>& v) const {
-			return Vector3(x + v.x, y + v.y, z + v.z);
-		}
-		Vector3<T>& operator+=(const Vector3<T>& v) {
-			x += v.x, y += v.y, z += v.z;
-			return *this;
-		}
-		Vector3<T> operator-(const Vector3<T>& v) const {
-			return Vector3(x - v.x, y - v.y, z - v.z);
-		}
-		Vector3<T>& operator-=(const Vector3<T>& v) {
-			x -= v.x, y -= v.y, z -= v.z;
-			return *this;
-		}
-		Vector3<T> operator-() const {
-			return Vector3<T>(-x, -y, -z);
-		}
-		template<typename U>
-		Vector3<T> operator*(U s) const {
-			return Vector3<T>(x * s, y * s, z * s);
-		}
-		template<>
-		Vector3<T> operator*(const Vector3<T>& v) const {
-			return Vector3<T>(x * v.x, y * v.y, z * v.z);
-		}
-		template<typename U>
-		Vector3<T>& operator*=(U s) {
-			x *= s, y *= s, z *= s;
-			return *this;
-		}
-		template<typename U>
-		Vector3<T> operator/(U s) const {
-			return Vector3<T>(x / s, y / s, z / s);
-		}
-		template<>
-		Vector3<T> operator/(Vector3<T> v) const {
-			return Vector3<T>(x / v.x, y / v.y, z / v.z);
-		}
-		template<typename U>
-		Vector3<T>& operator/=(U s) {
-			x /= s, y /= s, z /= s;
-			return *this;
-		}
-		float Norm() const {
-			return x * x + y * y + z * z;
-		}
-		float Length() const {
-			return std::sqrt(Norm());
-		}
-		Vector3<T>& Normalize() {
-			operator/=(Length());
-			return *this;
-		}
-		friend std::ostream& operator<<(std::ostream& os, const Vector3<T>& v) {
-			return os << v.x << "," << v.y << "," << v.z;
-		}
-		friend Vector3<T> operator*(const T& r, const Vector3<T>& v) {
-			return Vector3<T> * r;
-		}
-	};
-	
-	template<typename T>
-	inline T dotProduct(const Vector3<T>& a, const Vector3<T>& b) {
-		return (a.x * b.x + a.y * b.y + a.z * b.z);
-	}
-
-	template<typename T>
-	inline Vector3<T> crossProduct(const Vector3<T>& a, const Vector3<T>& b) {
-		return Vector3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
-	}
-
-	template<typename T>
-	inline Vector3<T> lerp(const Vector3<T>& a, const Vector3<T>& b, const float& t) {
-		return a * (1 - t) + b * t;
-	}
-
-	template<typename T>
-	inline Vector4<T> toVector4(const Vector3<T>& v) {
-		return Vector4<T>(v.x, v.y, v.z, 1.0f);
-	}
-
-	typedef Vector3<float> Vector3f;
-	typedef Vector3<int> Vector3i;
-
-	template<typename T>
 	class Vector2 {
 	public:
 		T x, y;
@@ -269,6 +89,260 @@ namespace myEigen {
 	typedef Vector2<float> Vector2f;
 	typedef Vector2<int> Vector2i;
 
+	template<typename T>
+	class Vector3 {
+	public:
+		T x, y, z;
+		Vector3() :x(0), y(0), z(0) {}
+		Vector3(T x) :x(x), y(x), z(x) {}
+		Vector3(T x, T y, T z) :x(x), y(y), z(z) {}
+		Vector3<T>& operator=(const Vector3<T>& v) {
+			x = v.x, y = v.y, z = v.z;
+			return *this;
+		}
+		Vector3<T> operator+(const Vector3<T>& v) const {
+			return Vector3(x + v.x, y + v.y, z + v.z);
+		}
+		Vector3<T>& operator+=(const Vector3<T>& v) {
+			x += v.x, y += v.y, z += v.z;
+			return *this;
+		}
+		Vector3<T> operator-(const Vector3<T>& v) const {
+			return Vector3(x - v.x, y - v.y, z - v.z);
+		}
+		Vector3<T>& operator-=(const Vector3<T>& v) {
+			x -= v.x, y -= v.y, z -= v.z;
+			return *this;
+		}
+		Vector3<T> operator-() const {
+			return Vector3<T>(-x, -y, -z);
+		}
+		template<typename U>
+		Vector3<T> operator*(U s) const {
+			return Vector3<T>(x * s, y * s, z * s);
+		}
+		template<>
+		Vector3<T> operator*(const Vector3<T>& v) const {
+			return Vector3<T>(x * v.x, y * v.y, z * v.z);
+		}
+		template<typename U>
+		Vector3<T>& operator*=(U s) {
+			x *= s, y *= s, z *= s;
+			return *this;
+		}
+		template<typename U>
+		Vector3<T> operator/(U s) const {
+			return Vector3<T>(x / s, y / s, z / s);
+		}
+		template<>
+		Vector3<T> operator/(Vector3<T> v) const {
+			return Vector3<T>(x / v.x, y / v.y, z / v.z);
+		}
+		template<typename U>
+		Vector3<T>& operator/=(U s) {
+			x /= s, y /= s, z /= s;
+			return *this;
+		}
+		float Norm() const {
+			return x * x + y * y + z * z;
+		}
+		float Length() const {
+			return std::sqrt(Norm());
+		}
+		Vector3<T>& Normalize() {
+			operator/=(Length());
+			return *this;
+		}
+		friend std::ostream& operator<<(std::ostream& os, const Vector3<T>& v) {
+			return os << v.x << "," << v.y << "," << v.z;
+		}
+		friend Vector3<T> operator*(const T& r, const Vector3<T>& v) {
+			return Vector3<T> *r;
+		}
+	};
+
+	template<typename T>
+	inline T dotProduct(const Vector3<T>& a, const Vector3<T>& b) {
+		return (a.x * b.x + a.y * b.y + a.z * b.z);
+	}
+
+	template<typename T>
+	inline Vector3<T> crossProduct(const Vector3<T>& a, const Vector3<T>& b) {
+		return Vector3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+	}
+
+	template<typename T>
+	inline Vector3<T> lerp(const Vector3<T>& a, const Vector3<T>& b, const float& t) {
+		return a * (1 - t) + b * t;
+	}
+
+	typedef Vector3<float> Vector3f;
+	typedef Vector3<int> Vector3i;
+
+	template<typename T>
+	class Vector4 {
+	public:
+		T x, y, z, w;
+		Vector4() :x(0), y(0), z(0), w(0) {}
+		Vector4(T x) :x(x), y(x), z(x), w(x) {}
+		Vector4(T x, T y, T z, T w) :x(x), y(y), z(z), w(w) {}
+		Vector4<T>& operator=(const Vector4<T>& v) {
+			x = v.x, y = v.y, z = v.z, w = v.w;
+			return *this;
+		}
+		Vector4<T> operator+(const Vector4<T>& v) const {
+			return Vector4(x + v.x, y + v.y, z + v.z, w + v.w);
+		}
+		Vector4<T>& operator+=(const Vector4<T>& v) {
+			x += v.x, y += v.y, z += v.z, w += v.w;
+			return *this;
+		}
+		Vector4<T> operator-(const Vector4<T>& v) const {
+			return Vector4(x - v.x, y - v.y, z - v.z, w - v.w);
+		}
+		Vector4<T>& operator-=(const Vector4<T>& v) {
+			x -= v.x, y -= v.y, z -= v.z, w -= v.w;
+			return *this;
+		}
+		Vector4<T> operator-() const {
+			return Vector4<T>(-x, -y, -z, -w);
+		}
+		template<typename U>
+		Vector4<T> operator*(U s) const {
+			return Vector4<T>(x * s, y * s, z * s, w * s);
+		}
+		template<>
+		Vector4<T> operator*(const Vector4<T>& v) const {
+			return Vector3<T>(x * v.x, y * v.y, z * v.z, w * v.w);
+		}
+		template<typename U>
+		Vector4<T>& operator*=(U s) {
+			x *= s, y *= s, z *= s, w *= s;
+			return *this;
+		}
+		template<typename U>
+		Vector4<T> operator/(U s) const {
+			return Vector4<T>(x / s, y / s, z / s, w / s);
+		}
+		template<>
+		Vector4<T> operator/(Vector4<T> v) const {
+			return Vector4<T>(x / v.x, y / v.y, z / v.z, w / v.w);
+		}
+		template<typename U>
+		Vector4<T>& operator/=(U s) {
+			x /= s, y /= s, z /= s, w /= s;
+			return *this;
+		}
+		float Norm() const {
+			return x * x + y * y + z * z + w * w;
+		}
+		float Length() const {
+			return std::sqrt(Norm());
+		}
+		Vector4<T>& Normalize() {
+			operator/=(Length());
+			return *this;
+		}
+		Vector3<T> xyz() const {
+			return Vector3<T>(x, y, z);
+		}
+		friend std::ostream& operator<<(std::ostream& os, const Vector4<T>& v) {
+			return os << v.x << "," << v.y << "," << v.z << "," << v.w;
+		}
+		friend Vector4<T> operator*(const T& r, const Vector4<T>& v) {
+			return Vector4<T> * r;
+		}
+	};
+
+	template<typename T>
+	inline T dotProduct(const Vector4<T>& a, const Vector4<T>& b) {
+		return (a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w);
+	}
+
+	template<typename T>
+	inline Vector4<T> lerp(const Vector4<T>& a, const Vector4<T>& b, const float& t) {
+		return a * (1 - t) + b * t;
+	}
+
+	typedef Vector4<float> Vector4f;
+	typedef Vector4<int> Vector4i;
+
+	template<typename T>
+	inline Vector4<T> toVector4(const Vector3<T>& v) {
+		return Vector4<T>(v.x, v.y, v.z, 1.0f);
+	}
+
+	class Matrixf2x2 {
+	public:
+		float m[2][2];
+		Matrixf2x2() {
+			m[0][0] = m[1][1] = 1.f;
+			m[0][1] = m[1][0] = 0.f;
+		}
+		Matrixf2x2(float mat[2][2]) { memcpy(m, mat, 4 * sizeof(float)); }
+		Matrixf2x2(float t00, float t01,
+			float t10, float t11)
+		{
+			m[0][0] = t00, m[0][1] = t01;
+			m[1][0] = t10, m[1][1] = t11;
+		}
+
+		template<typename T>
+		Matrixf2x2(Vector2<T> v0, Vector2<T> v1) {
+			m[0][0] = v0.x, m[0][1] = v1.x;
+			m[1][0] = v0.y, m[1][1] = v1.y;
+		}
+
+		Matrixf2x2 operator+(const Matrixf2x2& m) const {
+			Matrixf2x2 ans;
+			for (int i = 0; i < 2; i++) {
+				for (int j = 0; j < 2; j++) {
+					ans.m[i][j] = this->m[i][j] + m.m[i][j];
+				}
+			}
+			return ans;
+		}
+
+		template<typename T>
+		Vector2<T> operator*(const Vector2<T>& v) const {
+			return Vector2<T>(m[0][0] * v.x + m[0][1] * v.y,
+						      m[1][0] * v.x + m[1][1] * v.y);
+		}
+
+		Matrixf2x2 operator*(const Matrixf2x2& m) const {
+			Matrixf2x2 ans;
+			for (int i = 0; i < 2; i++) {
+				for (int j = 0; j < 2; j++) {
+					ans.m[i][j] = this->m[i][0] * m.m[0][j] +
+						this->m[i][1] * m.m[1][j];
+				}
+			}
+			return ans;
+		}
+
+		Matrixf2x2 operator*(float s) const {
+			Matrixf2x2 mat;
+			for (int i = 0; i < 2; i++)
+			{
+				for (int j = 0; j < 2; j++)
+				{
+					mat.m[i][j] = m[i][j] * s;
+				}
+			}
+			return mat;
+		}
+
+		friend std::ostream& operator<<(std::ostream& os, const Matrixf2x2& v) {
+			return os << v.m[0][0] << " " << v.m[0][1] << std::endl
+					  << v.m[1][0] << " " << v.m[1][1] << std::endl;
+		}
+	};
+
+	inline float Matrix2x2Determinant(const Matrixf2x2& m) {
+		float ans = m.m[0][0] * m.m[1][1] - m.m[0][1] * m.m[1][0];
+		return ans;
+	}
+
 	class Matrixf3x3 {
 	public:
 		float m[3][3];
@@ -289,7 +363,7 @@ namespace myEigen {
 		}
 
 		template<typename T>
-		Matrixf3x3(Vector3<T> v0, Vector3<T> v1, Vector3<T> v2, Vector3<T> v3) {
+		Matrixf3x3(Vector3<T> v0, Vector3<T> v1, Vector3<T> v2) {
 			m[0][0] = v0.x, m[0][1] = v1.x, m[0][2] = v2.x;
 			m[1][0] = v0.y, m[1][1] = v1.y, m[1][2] = v2.y;
 			m[2][0] = v0.z, m[2][1] = v1.z, m[2][2] = v2.z;
@@ -343,14 +417,56 @@ namespace myEigen {
 		}
 	};
 
+	inline Matrixf2x2 Matrix3x3CMinor(const Matrixf3x3& mat, uint16_t row, uint16_t col) {
+		float m[2][2];
+		int m_row = 0;
+		for (int i = 0; i < 3; i++) {
+			if (i == row) { continue; }
+			int m_col = 0;
+			for (int j = 0; j < 3; j++) {
+				if (j == col) { continue; }
+				m[m_row][m_col] = mat.m[i][j];
+				m_col++;
+			}
+			m_row++;
+		}
+		return Matrixf2x2(m);
+	}
+
 	inline float Matrix3x3Determinant(const Matrixf3x3& m) {
 		return m.m[0][0] * m.m[1][1] * m.m[2][2] +
 			m.m[0][1] * m.m[1][2] * m.m[2][0] +
 			m.m[0][2] * m.m[1][0] * m.m[2][1] -
-			m.m[0][2] * m.m[1][1] * m.m[2][1] -
+			m.m[0][2] * m.m[1][1] * m.m[2][0] -
 			m.m[0][1] * m.m[1][0] * m.m[2][2] -
 			m.m[0][0] * m.m[1][2] * m.m[2][1];
 
+	}
+
+	inline Matrixf3x3 Matrix3x3Transpose(const Matrixf3x3& m) {
+		Matrixf3x3 mat(m.m[0][0], m.m[1][0], m.m[2][0],
+					   m.m[0][1], m.m[1][1], m.m[2][1],
+					   m.m[0][2], m.m[1][2], m.m[2][2]);
+		return mat;
+	}
+
+	inline Matrixf3x3 Matrix3x3Inverse(const Matrixf3x3& m) {
+		float DetM = Matrix3x3Determinant(m);
+		float InverseDetM = 1.0f / DetM;
+		Matrixf3x3 CofMat;
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				CofMat.m[i][j] = pow(-1, i + j) * Matrix2x2Determinant(Matrix3x3CMinor(m, i, j));
+			}
+		}
+		return Matrix3x3Transpose(CofMat * InverseDetM);
+	}
+
+	inline Matrixf3x3 Matrix3x3Identity() {
+		Matrixf3x3 m;
+		return m;
 	}
 
 	class Matrixf4x4 {

@@ -82,6 +82,13 @@ namespace rst {
 		vertex[1].vertex = newVert[1];
 		vertex[2].vertex = newVert[2];
 	}
+	void Triangle::setWorldPos(int index, const myEigen::Vector4f& newVert) { vertex[index].worldPos = newVert; }
+	void Triangle::setWorldPos(const myEigen::Vector4f newVert[3])
+	{
+		vertex[0].worldPos = newVert[0];
+		vertex[1].worldPos = newVert[1];
+		vertex[2].worldPos = newVert[2];
+	}
 	void Triangle::setNormal(int index, const myEigen::Vector4f& newNorm) { vertex[index].normal = newNorm; }
 	void Triangle::setNormal(const myEigen::Vector4f newNorm[3])
 	{ 

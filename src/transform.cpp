@@ -10,6 +10,7 @@ namespace rst {
 
 	void Transform::undo() {
 		std::swap(m, mInv);
+		m = myEigen::Matrix4x4Inverse(mInv);
 	}
 
 	Transform Translate(const myEigen::Vector3f& delta) {

@@ -1,3 +1,4 @@
+
 #include "objLoader.h"
 #include <fstream>
 #include <sstream>
@@ -28,7 +29,7 @@ namespace rst
 			{
 				s >> header;
 				s >> mtlfilename;
-				mtlfilename = root + mtlfilename;
+				mtlfilename = mtlfilename;
 			}
 			else if(objLine.compare(0, 2, "o ") == 0)
 			{
@@ -65,7 +66,7 @@ namespace rst
 				std::string materialName;
 				s >> header;
 				s >> materialName;
-				Mesh mesh(mtlfilename, materialName);
+				Mesh mesh(mtlfilename, root, materialName);
 				objects[cur_obj].meshes.push_back(mesh);
 			}
 			else if (objLine.compare(0, 2, "f ") == 0)

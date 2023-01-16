@@ -11,7 +11,7 @@ namespace rst
 	class Mesh
 	{
 	public:
-		Mesh(const std::string& filename, const std::string& materialname) :material(filename, materialname) {}
+		Mesh(const std::string& filename, const std::string& root, const std::string& materialname) :material(filename, root, materialname) {}
 	public:
 		std::vector<Triangle> primitives;
 		Material material;
@@ -24,7 +24,6 @@ namespace rst
 	private:
 
 	public:
-		Material material();
 		std::vector<Mesh> meshes{};
 	};
 

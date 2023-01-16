@@ -138,16 +138,12 @@ namespace rst {
 		auto v = this->vertexOrder;
 		return v;
 	}
-	void rasterizer::setFragmentShader(std::function<Vertex(fragmentShaderPayload)> fragmentShader)
-	{
-		this->fragmentShader = fragmentShader;
-	}
 	int rasterizer::get_index(int x, int y)
 	{
 		return y * width + x;
 	}
 
-	void rasterizer::draw(std::vector<std::shared_ptr<rst::Triangle>>& TriangleList)
+	void rasterizer::draw(std::vector<std::shared_ptr<rst::Mesh>>& MeshList, IShader& shader)
 	{
 		Transform projection = Perspective(zneardis, zfardis, fovY, aspect);
 		Transform  mv = Camera(eye_pos, gaze_dir, view_up) * Modeling(myEigen::Vector3f(0),
@@ -155,88 +151,67 @@ namespace rst {
 			myEigen::Vector3f(rotateAxis), theta);
 		Transform viewport = Viewport(width, height);
 
-		for (const auto& t : TriangleList)
+		for (const auto& m : MeshList)
 		{
-			Triangle NewTriangle = *t;
-
-			//Model Space -> World Space -> Camera Space
-			std::array<myEigen::Vector4f, 3> vert
+			for (const auto& t : (*m).primitives)
 			{
-				(mv(t->vertex[0].vertex)),
-				(mv(t->vertex[1].vertex)),
-				(mv(t->vertex[2].vertex))
-			};
+				Triangle NewTriangle = t;
 
-			//BackCulling
-			if (backCulling) {
-				auto v1 = vert[1] - vert[0];
-				auto v2 = vert[2] - vert[1];
-				auto v = myEigen::crossProduct(myEigen::Vector3f(v1.x, v1.y, v1.z), myEigen::Vector3f(v2.x, v2.y, v2.z));
-				auto gaze = myEigen::Vector3f(vert[0].x, vert[0].y, vert[0].z);
-				if (vertexOrder == TriangleVertexOrder::counterclockwise)
+				shader.VertexShader(NewTriangle);
+
+				std::array<myEigen::Vector4f, 3> vert
 				{
-					if (myEigen::dotProduct(v, gaze) >= 0) return;
-				}
-				else
+					NewTriangle.vertex[0].vertex,
+					NewTriangle.vertex[1].vertex,
+					NewTriangle.vertex[2].vertex
+				};
+
+				//Homogeneous Clipping 
+				for (auto& v : vert)
 				{
-					if (myEigen::dotProduct(v, gaze) <= 0) return;
+					if (v.w > -zneardis || v.w < -zfardis) continue;
+				}
+
+				std::array<myEigen::Vector4f, 3> clipSpacePos
+				{
+					NewTriangle.vertex[0].vertex,
+					NewTriangle.vertex[1].vertex,
+					NewTriangle.vertex[2].vertex
+				};
+
+				//Homogeneous Clipping Space -> Canonical View Volume(CVV)
+				for (auto& v : vert)
+				{
+					v /= v.w;
+				}
+
+				//Canonical View Volume(CVV) -> Screen Space
+				for (auto& v : vert)
+				{
+					v = viewport(v);
+				}
+
+				for (size_t i = 0; i < 3; i++)
+				{
+					NewTriangle.setVertexPos(i, vert[i]);
+				}
+
+				//Viewport Clipping
+				auto NewVert = clip_Cohen_Sutherland(NewTriangle, clipSpacePos);
+				if (NewVert.empty()) continue;
+
+				shader.setmtl((*m).material);
+				shader.setddx(-1);
+				shader.setddy(-1);
+
+				for (size_t i = 0; i < NewVert.size() - 2; i++)
+				{
+					//rasterize_edge_walking(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), shader, clipSpacePos);
+					rasterize_edge_equation(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), shader, clipSpacePos);
+					//rasterize_wireframe(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]));
 				}
 			}
 
-			//Transform Normal
-			auto normalMV = mv;
-			normalMV.toNormal();
-			std::array<myEigen::Vector4f, 3> normal
-			{
-				(normalMV(t->vertex[0].normal)),
-				(normalMV(t->vertex[1].normal)),
-				(normalMV(t->vertex[2].normal))
-			};
-
-			//Camera Space -> Homogeneous Clipping Space
-			for (auto& v : vert)
-			{
-				v = projection(v);
-			}
-
-			//Homogeneous Clipping 
-			for (auto& v : vert)
-			{
-				if (v.w > -zneardis || v.w < -zfardis) continue;
-			}
-			auto clipSpacePos = vert;
-
-			//Homogeneous Clipping Space -> Canonical View Volume(CVV)
-			for (auto& v : vert)
-			{
-				v /= v.w;
-			}
-
-			//Canonical View Volume(CVV) -> Screen Space
-			for (auto& v : vert)
-			{
-				v = viewport(v);
-			}
-
-			for (size_t i = 0; i < 3; i++)
-			{
-				NewTriangle.setVertexPos(i, vert[i]);
-				NewTriangle.setColor(i, t->vertex[i].vertexColor);
-				NewTriangle.setNormal(i, normal[i]);
-			}
-
-			//Viewport Clipping
-			auto NewVert = clip_Cohen_Sutherland(NewTriangle, clipSpacePos);
-			if (NewVert.empty()) continue;
-
-			for (size_t i = 0; i < NewVert.size() - 2; i++)
-			{
-				rasterize_edge_walking(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), clipSpacePos);
-				//rasterize_edge_equation(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), clipSpacePos);
-				//rasterize_wireframe(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]));
-			}
-			
-			//rasterize_edge_walking(NewTriangle, clipSpacePos);
 			
 		}
 	}
@@ -416,7 +391,8 @@ namespace rst {
 		draw_line(c, a);
 	}
 
-	void rasterizer::rasterize_edge_walking(const Triangle& m, const std::array<myEigen::Vector4f, 3>& clipSpacePos)
+	void rasterizer::rasterize_edge_walking(const Triangle& m, IShader& shader,
+		const std::array<myEigen::Vector4f, 3>& clipSpacePos)
 	{
 		Triangle t = m;
 		auto csp = clipSpacePos;
@@ -428,6 +404,9 @@ namespace rst {
 			std::swap(t.vertex[1], t.vertex[2]); std::swap(csp[1], csp[2]);
 		float longEdge = t.vertex[2].vertex.y - t.vertex[0].vertex.y;
 		if (longEdge == 0) { return; }
+
+		Vertex pixel;
+
 		//scan the bottom triangle
 		for (int y = std::ceil(t.vertex[0].vertex.y - 0.5f); y < std::ceil(t.vertex[1].vertex.y - 0.5f); y++)
 		{
@@ -442,14 +421,17 @@ namespace rst {
 			Vertex longVertexC = perspectiveLerp(t.vertex[0], t.vertex[2],longLerp, csp[0], csp[2]);
 
 			if (shortVertex.vertex.x > longVertex.vertex.x)
+			{
 				std::swap(shortVertex, longVertex);
+				std::swap(csp[1], csp[2]);
+			}
+
 			for (int i = std::ceil(shortVertex.vertex.x - 0.5f); i < std::ceil(longVertex.vertex.x - 0.5f); i++)
 			{
 				float lerpNumber = ((float)i + 0.5f - shortVertex.vertex.x) / (longVertex.vertex.x - shortVertex.vertex.x);
-				Vertex pixel = perspectiveLerp(shortVertex, longVertex, lerpNumber, shortVertexC.vertex, longVertexC.vertex);
+				pixel = perspectiveLerp(shortVertex, longVertex, lerpNumber, shortVertexC.vertex, longVertexC.vertex);
 
-				fragmentShaderPayload payload(pixel, light);
-				pixel = BlinnPhongShader(payload);
+				pixel.vertexColor = shader.FragmentShader(pixel);
 
 				if (pixel.vertex.z > z_buffer[get_index(i, y)])
 				{
@@ -458,6 +440,7 @@ namespace rst {
 				}
 			}
 		}
+
 		//scan the top triangle
 		for (int y = std::ceil(t.vertex[1].vertex.y - 0.5f); y < std::ceil(t.vertex[2].vertex.y - 0.5f); y++)
 		{
@@ -472,14 +455,17 @@ namespace rst {
 			Vertex longVertexC = perspectiveLerp(t.vertex[0], t.vertex[2], longLerp, csp[0], csp[2]);
 			
 			if (shortVertex.vertex.x > longVertex.vertex.x)
+			{
 				std::swap(shortVertex, longVertex);
+				std::swap(csp[1], csp[2]);
+			}
+
 			for (int i = std::ceil(shortVertex.vertex.x - 0.5f); i < std::ceil(longVertex.vertex.x - 0.5f); i++)
 			{
 				float lerpNumber = ((float)i + 0.5f - shortVertex.vertex.x) / (longVertex.vertex.x - shortVertex.vertex.x);
-				Vertex pixel = perspectiveLerp(shortVertex, longVertex, lerpNumber, shortVertexC.vertex, longVertexC.vertex);
+				pixel = perspectiveLerp(shortVertex, longVertex, lerpNumber, shortVertexC.vertex, longVertexC.vertex);
 
-				fragmentShaderPayload payload(pixel, light);
-				pixel = BlinnPhongShader(payload);
+				pixel.vertexColor = shader.FragmentShader(pixel);
 
 				if (pixel.vertex.z > z_buffer[get_index(i, y)])
 				{
@@ -526,24 +512,59 @@ namespace rst {
 		return (side1 >= 0 && side2 >= 0 && side3 >= 0) || (side1 <= 0 && side2 <= 0 && side3 <= 0);
 	}
 
-	void rasterizer::rasterize_edge_equation(const Triangle& m, const std::array<myEigen::Vector4f, 3>& clipSpacePos)
+	void rasterizer::rasterize_edge_equation(const Triangle& m, IShader& shader, const std::array<myEigen::Vector4f, 3>& clipSpacePos)
 	{
 		int boundingTop = std::ceil(std::max({ m.vertex[0].vertex.y, m.vertex[1].vertex.y, m.vertex[2].vertex.y }));
 		int boundingBottom = std::floor(std::min({ m.vertex[0].vertex.y, m.vertex[1].vertex.y, m.vertex[2].vertex.y }));
 		int boundingRight = std::ceil(std::max({ m.vertex[0].vertex.x, m.vertex[1].vertex.x, m.vertex[2].vertex.x }));
 		int boundingLeft = std::floor(std::min({ m.vertex[0].vertex.x, m.vertex[1].vertex.x, m.vertex[2].vertex.x }));
 
-		for (int y = boundingBottom; y < boundingTop; y++)
+		for (int y = boundingBottom; y < boundingTop; y += 2)
 		{
-			for (int x = boundingLeft; x < boundingRight; x++) 
+			for (int x = boundingLeft; x < boundingRight; x += 2) 
 			{
-				if (insideTriangle(m, (float)x + 0.5, (float)y + 0.5)) 
+				Vertex pixel[2][2];
+				for (int a : {x, x + 1})
 				{
-					Vertex pixel = barycentricPerspectiveLerp(m, myEigen::Vector2f(x + 0.5, y + 0.5), clipSpacePos);
-					if (pixel.vertex.z > z_buffer[get_index(x, y)]) 
+					for (int b : {y, y + 1})
 					{
-						image.set(x, y, pixel.vertexColor);
-						z_buffer[get_index(x, y)] = pixel.vertex.z;
+						if (insideTriangle(m, (float)a + 0.5, (float)b + 0.5))
+						{
+							pixel[a - x][b - y] =
+								barycentricPerspectiveLerp(m, myEigen::Vector2f(a + 0.5, b + 0.5), clipSpacePos);
+						}
+					}
+				}
+
+				float ddx = -1;
+				float ddy = -1;
+
+				for (int i : {0, 1})
+				{
+					if (!pixel[i][0].empty() && !pixel[i][1].empty())
+					{
+						ddx = std::max(fabs((pixel[i][1].texcoord - pixel[i][0].texcoord).Length()), ddx);
+					}
+					if (!pixel[0][i].empty() && !pixel[1][i].empty())
+					{
+						ddy = std::max(fabs((pixel[0][i].texcoord - pixel[1][i].texcoord).Length()), ddy);
+					}
+				}
+
+				shader.setddx(-1);
+				shader.setddy(-1);
+
+				for (int a : {0, 1})
+				{
+					for (int b : {0, 1})
+					{
+						if (pixel[a][b].empty()) continue;
+						pixel[a][b].vertexColor = shader.FragmentShader(pixel[a][b]);
+						if (pixel[a][b].vertex.z > z_buffer[get_index(x + a, y + b)])
+						{
+							image.set(x + a, y + b, pixel[a][b].vertexColor);
+							z_buffer[get_index(x + a, y + b)] = pixel[a][b].vertex.z;
+						}
 					}
 				}
 			}

@@ -3,8 +3,9 @@
 #include "myEigen.hpp"
 #include "transform.h"
 #include "geometry.h"
-#include "model.h"
 #include "shader.h"
+#include "material.h"
+#include "objLoader.h"
 #include <functional>
 
 namespace rst {
@@ -31,15 +32,16 @@ namespace rst {
 			void TurnOffBackCulling();
 			void SetVertexOrder(const TriangleVertexOrder& t);
 			TriangleVertexOrder GetVertexOrder();
-			void draw(std::vector<std::shared_ptr<rst::Triangle>>& TriangleList);
-			void setFragmentShader(std::function<Vertex(fragmentShaderPayload)> fragmentShader);
+			void draw(std::vector<std::shared_ptr<Mesh>>& MeshList, IShader& shader);
 		private:
 			std::vector<Vertex> clip_Cohen_Sutherland(const Triangle& t, const std::array<myEigen::Vector4f, 3>& clipSpacePos);
 			Line clip_line(const Line& line, const std::array<myEigen::Vector4f, 2>& clipSpacePos);
 			bool insideTriangle(const Triangle& m, const float x, const float y);
 			void rasterize_wireframe(const Triangle& m);
-			void rasterize_edge_walking(const Triangle& m, const std::array<myEigen::Vector4f, 3>& clipSpacePos);
-			void rasterize_edge_equation(const Triangle& m, const std::array<myEigen::Vector4f, 3>& clipSpacePos);
+			void rasterize_edge_walking(const Triangle& m, IShader& shader,
+				const std::array<myEigen::Vector4f, 3>& clipSpacePos);
+			void rasterize_edge_equation(const Triangle& m, IShader& shader,
+				const std::array<myEigen::Vector4f, 3>& clipSpacePos);
 
 		private:
 			const TGAColor white = TGAColor(255, 255, 255, 255);//°×É«
@@ -61,7 +63,6 @@ namespace rst {
 			float theta;
 
 			PointLight light;
-			std::function<Vertex(fragmentShaderPayload)> fragmentShader;
 			std::vector<float> z_buffer;
 			int get_index(int x, int y);
 	};
