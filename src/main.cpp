@@ -219,7 +219,7 @@ namespace rst
             //Vertex a = payload.vertex;
             //a.vertexColor = TGAColor(payload.vertex.texcoord.x * 255.0f, payload.vertex.texcoord.y * 255.0f, 255.0f);
             //return a;
-            Kd = myEigen::Vector3f(0.5);
+            //Kd = myEigen::Vector3f(0.5);
             //Ks = Kd;
             float Ns = material->Ns;
             float Ie = 0;

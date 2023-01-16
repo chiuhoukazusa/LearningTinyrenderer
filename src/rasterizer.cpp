@@ -551,8 +551,8 @@ namespace rst {
 					}
 				}
 
-				shader.setddx(-1);
-				shader.setddy(-1);
+				shader.setddx(ddx);
+				shader.setddy(ddy);
 
 				for (int a : {0, 1})
 				{
