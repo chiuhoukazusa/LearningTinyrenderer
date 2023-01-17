@@ -1,1181 +1,1244 @@
-# 04.在MVP之后|裁剪、三角形光栅化与深度测试
+# 05.载入3D模型|模型加载、简单着色与纹理映射
 
 ## 本项目代码已托管至github，将会随着博客实时更新进度
 
 每一节的工程我都会创建一个新的分支，分支名由这一节的数字决定。
 
-[https://github.com/chiuhoukazusa/LearningTinyrenderer/tree/04](https://github.com/chiuhoukazusa/LearningTinyrenderer/tree/04)
+[https://github.com/chiuhoukazusa/LearningTinyrenderer/tree/05](https://github.com/chiuhoukazusa/LearningTinyrenderer/tree/05)
 
 ## 前言
 
-上一节中我们已经实现了一个简单的光栅化，但是这其实是完全不足够的，一个合理的三角形光栅化过程值得开一整节去叙述。
+在上一节的工作完成后，我们离渲染出一个正常的三维模型还剩下两步，纹理映射和着色，当然前提是得先把模型给加载了。
 
-但这一节讲的将不仅仅是光栅化的过程，严格意义上讲，三角形光栅化基本上就是寻找三角形并且对一些属性插值的过程。但实际上图形渲染管线还有很多杂七杂八的步骤，我也将在这一节中进行讨论。
+这一节先来尝试纹理映射和简单着色模型。
 
-一般来说，MVP变换到光栅化，中间还应当有一个裁剪的步骤。而光栅化后就是着色，也是我们fragment shader工作的地方。着色后需要一个深度测试检测遮挡，用来判断哪些面是应该渲染的，当然着色后可能会有很多种不同的测试，但是我们这里先只讨论深度测试。
+上一节我们说过要引入一个读取obj的头文件，但我觉得完全可以自己写一个简单的objloader，那就不引入了吧。
 
-所有的测试都完成后会进入屏幕后处理阶段，可以做一些滤镜的效果，也可以做知名的RayMarching算法来构建诸如大气散射体积云等效果，当然也可以什么都不做直接渲染出图像。
+## OBJ-MTL文件格式
 
-除此之外还需要一些简单的抗锯齿，而抗锯齿并不是一个固定的阶段，他可能发生在上述任何一个阶段，需要看具体算法而定。
+obj是最广泛使用的3维模型的格式，实际上obj只是一个纯文本文件，我们可以梳理出他的大致结构。而mtl也是一个纯文本文件，基本上和obj对应，会记录一些材质信息。
 
-其中，着色与屏幕后处理我们将在后续单独开新章节讲述，测试也许也会专门开章节吧。在这里我们将主要讲述的内容是裁剪、光栅化与深度测试。
+我们以games202的吉祥物为例来理解一下obj和mtl文件的结构：
 
-### 封装Vertex类
+```obj
+# Blender v2.90.1 OBJ File: 'Marry.blend'
+# www.blender.org
+mtllib Marry.mtl
+o 文本
+v 0.141234 1.731161 0.414226
+v 0.089634 1.739039 0.419244
+v 0.094429 1.750718 0.414622
+v 0.098634 1.761540 0.410368
+......
+vt 0.295455 0.000000
+vt 0.272727 0.000000
+vt 0.284091 0.000000
+vt 0.306818 0.000000
+......
+vn 0.0938 0.6694 0.7369
+vn 0.0938 0.6695 0.7369
+......
+usemtl 材质
+s off
+f 27/1/1 25/2/1 26/3/1
+f 28/4/2 25/2/2 27/1/2
+f 29/5/3 25/2/3 28/4/3
+f 29/5/4 24/6/4 25/2/4
+......
+o Body_MC003_Kozakura_Mari_face
+v 0.068341 3.046584 0.159396
+v 0.052779 3.045725 0.167629
+v 0.067417 3.050314 0.165910
+......
+vt 0.042575 0.471054
+vt 0.035748 0.456984
+......
+vn 0.2510 -0.7130 0.6547
+vn 0.3849 -0.6684 0.6365
+......
+usemtl MC003_Kozakura_Mari
+s 1
+f 277/275/220 276/276/221 275/277/222
+f 278/278/223 275/277/222 276/276/221
+......
+```
 
-因为我们马上就会需要用到大量的插值算法，而每个顶点上存储的所有属性都将会被插值。
+```MTL
+# Blender MTL File: 'Marry.blend'
+# Material Count: 2
 
-我们目前只是用到了法线颜色和坐标，我们后面马上就会引入深度和纹理坐标等属性，为了不让我们重复花费时间在给每个属性插值上面，我们先抽象一个vertex类：
+newmtl MC003_Kozakura_Mari
+Ns 900.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd MC003_Kozakura_Mari.png
+
+newmtl 材质
+Ns 900.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.270588 0.552941 0.874510
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+```
+
+省略号省去了数据信息。前者是Marry.obj，后者是Marry.mtl。
+
+我们可以看到除去前几行的注释信息外，最早载入眼帘的是"mtllib Marry.mtl"，mtllib这个关键词意指与这个obj配对的mtl文件，后面跟着的自然是文件的相对路径，当然也可以省略，这样的话就不使用材质。
+
+然后是"o 文本"，这里的o意思是object，一个obj文件里不一定只有一个object，可以有多个object，相当于一个obj里存了多个模型，当然如果只有一个模型的话这行也可以省略。有些obj在o这个层级下还会有g这个层级，意思是group，分组。这个我们暂时先不考虑。
+
+然后就是object下的一行行属性了。v开头的行储存了顶点信息，vt开头的行储存了纹理坐标信息，vn开头的行储存了法线信息。
+
+f开头的行储存了每一个primitive的信息。f后面跟着三份用空格隔开的数据，指的是一个primitive由三个顶点组成，自然就是三角形图元。然后每份数据以v/vt/vn的顺序储存，当然不管是v还是vt或是vn都是以索引的形式储存，不过这个索引是以1开始的。
+
+而且还要注意！这个索引是不会因为object的改变而重新从1开始计数的，可以看到上面的obj文件里，第一个object的索引都是从1开始的，而第二个object的索引就从200多开始了，也可以说，这个索引是全局计数的。
+
+还有就是f上面也有几行信息，usemtl显然就是对应mtl文件里定义的newmtl了，而s指的是光滑组，"s 1"代表软边，"s off"代表硬边。软边和硬边就决定了我们怎么使用法线信息。如果是s off，那么我们定义的法线就是面法线，也就是三角形三个顶点共享一个法线，如果是开启光滑组，那么三角形三个顶点都会有各自的法线，而三角形内部任意一点都是由三个顶点的法线插值出来。不过我们暂时可以不用考虑光滑组的问题，因为我们可以看到，在202吉祥物的obj文件中的两个object，没开光滑组的那个object的f行里每一行的法线顶点索引都是一样的，也就是说f行里已经帮我们解决了光滑组的问题。
+
+关于MTL文件部分可以参考这个链接里的内容。
+
+http://www.paulbourke.net/dataformats/mtl/
+
+mtl文件详细我们将在后续说到纹理映射的时候再提。
+
+## 读取OBJ文件
+
+我们先不管mtl文件，先按之前说的obj文件格式的标准来写一个简单读取obj文件的objloader试试。
+
+我们不考虑组，也就是g这个关键词，那就是一个obj文件中可能存在多个o(object)，每个object又不一定使用一个material，也就是一个o下可能有多个usemtl，我们按这个逻辑可以梳理出一个大体结构：
 
 ```c++
 #pragma once
+#include "tgaimage.h"
+#include "myEigen.hpp"
+#include "geometry.h"
+#include "material.h"
+#include <vector>
+#include <string>
+
+namespace rst
+{
+	class Mesh
+	{
+	public:
+		Mesh(const std::string& filename, const std::string& materialname) :material(filename, materialname) {}
+	public:
+		std::vector<Triangle> primitives;
+		Material material;
+	};
+
+	class Object
+	{
+	public:
+		Object() {};
+	private:
+
+	public:
+		std::vector<Mesh> meshes{};
+	};
+
+	class Model
+	{
+	public:
+		Model(const std::string& root, const std::string& filename);
+	private:
+		std::vector<myEigen::Vector3f> verts{};
+		std::vector<myEigen::Vector3f> normals{};
+		std::vector<myEigen::Vector2f> texcoords{};
+	public:
+		std::vector<Object> objects{};
+	};
+}
+```
+
+Model->Object->Mesh
+
+其中Mesh跟material绑定，object用于存储Mesh，Model用于存储Object。
+
+我们目前只支持三角形图元，obj文件其实远不仅仅我们之前说的那些形式，他完全可以支持其他形状的图元，但是我们这里就不考虑了。
+
+material类我们之后讨论mtl读取的时候再作讨论。
+
+我们在model的构造函数里写下具体读取操作：
+
+```c++
+#include "objLoader.h"
+#include <fstream>
+#include <sstream>
+
+namespace rst
+{
+	Model::Model(const std::string& root, const std::string& filename)
+	{
+		std::ifstream obj;
+		std::string mtlfilename;
+		obj.open(root + filename, std::ifstream::in);
+		if (obj.fail())
+		{
+			std::cerr << "Cannot open:" << filename << std::endl;
+			return;
+		}
+		std::string objLine;
+		while (!obj.eof())
+		{
+			std::getline(obj, objLine);
+			std::istringstream s(objLine);
+			std::string header;
+			char trash;
+			int cur_obj = objects.size() - 1;
+			int cur_mesh;
+			if(!objects.empty()) cur_mesh = objects[cur_obj].meshes.size() - 1;
+			if (objLine.compare(0, 7, "mtllib ") == 0)
+			{
+				s >> header;
+				s >> mtlfilename;
+				mtlfilename = root + mtlfilename;
+			}
+			else if(objLine.compare(0, 2, "o ") == 0)
+			{
+				s >> header >> header;
+				objects.push_back(Object());
+			}
+			else if (objLine.compare(0, 2, "v ") == 0)
+			{
+				if (objects.empty())
+				{
+					objects.push_back(Object());
+				}
+				float x, y, z;
+				s >> header;
+				s >> x >> y >> z;
+				verts.push_back(myEigen::Vector3f(x, y, z));
+			}
+			else if (objLine.compare(0, 3, "vt ") == 0)
+			{
+				float x, y;
+				s >> header;
+				s >> x >> y;
+				texcoords.push_back(myEigen::Vector2f(x, y));
+			}
+			else if (objLine.compare(0, 3, "vn ") == 0)
+			{
+				float x, y, z;
+				s >> header;
+				s >> x >> y >> z;
+				normals.push_back(myEigen::Vector3f(x, y, z));
+			}
+			else if (objLine.compare(0, 7, "usemtl ") == 0)
+			{
+				std::string materialName;
+				s >> header;
+				s >> materialName;
+				Mesh mesh(mtlfilename, materialName);
+				objects[cur_obj].meshes.push_back(mesh);
+			}
+			else if (objLine.compare(0, 2, "f ") == 0)
+			{
+				int v[3], vt[3], vn[3];
+				s >> header;
+				for (size_t i = 0; i < 3; i++)
+				{
+					s >> v[i] >> trash >> vt[i] >> trash >> vn[i];
+				}
+				Vertex vertex[3]
+				{ 
+					Vertex(verts[v[0] - 1], TGAColor(255, 255, 255), normals[vn[0] - 1], texcoords[vt[0] - 1]),
+					Vertex(verts[v[1] - 1], TGAColor(255, 255, 255), normals[vn[1] - 1], texcoords[vt[1] - 1]),
+					Vertex(verts[v[2] - 1], TGAColor(255, 255, 255), normals[vn[2] - 1], texcoords[vt[2] - 1])
+				};
+				objects[cur_obj].meshes[cur_mesh].primitives.push_back(Triangle(vertex));
+			}
+		}
+		obj.close();
+
+	}
+}
+```
+
+目前我们没有写所谓的纹理映射，但是我们还有一个办法可以检验我们的成果，那就是draw_wireframe()，使用之前写的线框渲染函数来看看究竟能不能读取我们的obj文件。
+
+我们先拿202酱试试刀：
+
+![202girl_wireframe](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450657.gif)
+
+非常成功！debug模式下渲染72帧用时13秒，当然我微调了下相机位置，不然202酱起码一半都在屏幕外面。
+
+202酱的obj文件有3万行左右。 
+
+我们再来试试另一个有30万行obj文件的神秘嘉宾：
+
+![Melina_wireframe](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450731.gif)
+
+debug模式下渲染72帧用时62秒，一下就慢了下来，至于这位神秘嘉宾具体是谁就先不剧透了，主要是因为202酱只有一张纹理贴图，我们为了后续纹理映射的讲解需要更复杂的mtl文件和纹理文件，所以我们又请了一位嘉宾来做我们的讲师。
+
+## 着色
+
+当然我们肯定不会满足于仅仅使用线框模式来渲染我们的三维模型。
+
+我们也不能直接就让模型按照我们上一节的代码直接运行，那样看到的只不过是把上面的渲染结果从线框变成一片实心白色的轮廓而已。
+
+我们实际上要体现的是光影关系，也就是光照效果，这就是我们目前要做的，写一个简单的着色模型。
+
+我们先来讨论着色位于渲染管线的哪个位置。或者更具体一点，片元着色器应该位于渲染管线的哪个位置。
+
+片元着色器紧跟着光栅化之后，位于各种测试，包括但不限于深度测试、模板测试等的前面。
+
+我们定义一个函数指针用于存储我们使用的片元着色函数，同时在深度测试前调用我们的片元着色器，因此我们要修改edge walking或者edge equation的函数：
+
+```c++
+"rasterizer.hpp"
+    
+namespace rst
+{
+    class rasterizer
+    {
+        public:
+        ......
+            std::function<Vertex(fragmentShaderPayload)> fragmentShader;
+    }
+}
+
+"rasterizer.cpp"
+    void rasterizer::rasterize_edge_walking(const Triangle& m, const std::array<myEigen::Vector4f, 3>& clipSpacePos)
+	{
+		...
+		//scan the bottom triangle
+		for (int y = std::ceil(t.vertex[0].vertex.y - 0.5f); y < std::ceil(t.vertex[1].vertex.y - 0.5f); y++)
+		{
+			...
+			for (int i = std::ceil(shortVertex.vertex.x - 0.5f); i < std::ceil(longVertex.vertex.x - 0.5f); i++)
+			{
+				...
+				fragmentShaderPayload payload(pixel, light);
+				pixel = fragmentShader(payload);
+				if (pixel.vertex.z > z_buffer[get_index(i, y)])
+				{
+					...
+				}
+			}
+		}
+		//scan the top triangle
+		for (int y = std::ceil(t.vertex[1].vertex.y - 0.5f); y < std::ceil(t.vertex[2].vertex.y - 0.5f); y++)
+		{
+			...
+			for (int i = std::ceil(shortVertex.vertex.x - 0.5f); i < std::ceil(longVertex.vertex.x - 0.5f); i++)
+			{
+				...
+				fragmentShaderPayload payload(pixel, light);
+				pixel = fragmentShader(payload);
+				if (pixel.vertex.z > z_buffer[get_index(i, y)])
+				{
+					...
+				}
+			}
+		}
+
+	}
+```
+
+光在打到物体表面的着色点再反射到相机的过程可以暂时简单考虑成两个阶段。
+
+第一个阶段我们要计算出着色点接收到的irradiance是多少，也就是有多少的光入射。
+
+第二个阶段我们要计算出有多少光被反射到相机里了。
+
+### 点光源or平行光
+
+我们来考虑简单的光照情况，点光源和平行光。
+
+先来讨论点光源，一个点光源可以由一个位置和一个intensity定义，intensity可以理解为光源产生出的光的“数量”。
+
+实际上intensity的定义为单位立体角上接收到的光通量(power or radiant flux)的大小，单位为cd(坎德拉)，可以用来更好地代替光通量或者说灯泡功率这个光源变量。
+
+![irradiance随着距离平方而减小](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450840.png)
+
+参考这张来自虎书的插图，我们认为一个点光源在所有方向上的intensity都是相同的，或者说，这个点光源是各向同性的。与此相反的是有时候我们会使用一些被称作"spot lights"的光源，它们只在某些方向上投射光线，自然这些光源也就不是各向同性的了。
+
+第一阶段我们需要计算出着色点的irradiance，irradiance的定义是单位面积接收到的光通量。我们整理一下公式：
+$$
+d\omega=\frac{dA}{r^2}\\
+intensity=\frac{d\Phi}{d\omega}=\frac{d\Phi r^2}{dA}\\
+irradiance=\frac{d\Phi}{dA}=\frac{intensity}{r^2}
+$$
+但是我们计算出来的irradiance是仅当光垂直射向着色点的情况下的，如果光和着色点法线存在一个夹角，那么我们再乘上夹角跟着色点法线的余弦值即可。
+
+而对于平行光而言，我们认为是一组平行且没有衰减的光线，类似太阳光，自然没有衰减我们也不会关心平行光的位置，我们只需要存储平行光的intensity和方向即可。
+
+```c++
+	class Light
+	{
+	public:
+		virtual ~Light() = default;
+		virtual std::string getType() = 0;
+	};
+
+	class PointLight : public Light
+	{
+	public:
+		myEigen::Vector3f position;
+		float intensity;
+	public:
+		PointLight(const myEigen::Vector3f& position, const float intensity)
+			:position(position), intensity(intensity){}
+		std::string getType() { return std::string("PointLight"); }
+	};
+
+	class DirectionalLight : public Light
+	{
+	public:
+		myEigen::Vector3f direction;
+		float intensity;
+	public:
+		DirectionalLight(const myEigen::Vector3f& direction, const float intensity)
+			:direction(direction), intensity(intensity) {}
+		std::string getType() { return std::string("DirectionalLight"); }
+	};
+```
+
+我们这节编写代码都将以点光源为主。
+
+### Blinn-Phong着色模型
+
+接下来我们讨论被反射出来的光有多少，这中间涉及了光在投射到物体表面的时候究竟发生了什么。
+
+我们来认识一个比较简单的经验模型，也就是Blinn-Phong着色模型，这个模型认为物体表面反射到相机的光线存在四种类型。
+
+分别是自发光(emission)，环境光(ambient)，漫反射(diffuse)和高光反射(specular)。
+
+先来写一下fragment shader的结构：
+
+```c++
+	class fragmentShaderPayload
+	{
+	public:
+		fragmentShaderPayload() = default;
+		fragmentShaderPayload(const Vertex& vertex, const PointLight& light)
+			:vertex(vertex), light(light) {}
+		Vertex vertex;
+		PointLight light;
+	};
+
+	static Vertex BlinnPhongShader(const fragmentShaderPayload& payload)
+	{
+        //emission
+        
+		//ambient
+
+		//diffuse
+
+		//specular
+
+		auto color = emission + ambient + diffuse + specular;
+
+		color = color * 255.0f;
+
+		color.x = color.x > 255.0f ? 255.0f : color.x;
+		color.y = color.y > 255.0f ? 255.0f : color.y;
+		color.z = color.z > 255.0f ? 255.0f : color.z;
+		
+		Vertex v = payload.vertex;
+		v.vertexColor = TGAColor(color.x, color.y, color.z);
+		return v;
+	}
+```
+
+注意一下我们的颜色使用uint_8存储的，也就是范围在0-255之间，如果计算结果大于255溢出，也就是说过曝光的话会重新从0开始计数，我们暂时处理不了过曝光，所以先把输出的颜色三个分量限制在255以内。但是我们做着色计算的时候需要将颜色映射到0-1范围内，大多数公式都是基于颜色用0-1的浮点数表示的基础来进行计算的。
+
+#### 自发光
+
+自发光其实就是直接将着色点试做一个光源。
+
+我们定义ke为发出的光的颜色，或者说是自发光系数，定义Ie为发出的光的intensity。
+
+```c++
+		myEigen::Vector3f ke(0, 0, 0);
+		float Ie = 0;
+
+		//emission
+		auto emission = ke * Ie;
+```
+
+我们不打算让模型自发光，所以都设置为0。
+
+#### 环境光
+
+环境光类似于无差别地给模型上一组颜色，用来模拟一种间接光照的效果。实际在现实中的物体在面对单光源的时候不会因为哪个面背向光源就完全不可见，背向光源的表面也会被光线投射在其他表面上反射出来的光线给照亮，这就是我们说的间接光照。
+
+我们定义一个三维颜色向量ka为环境光系数，再定义一个Ia为环境光的intensity，我们认为环境光就是ka*Ia。
+$$
+\vec{ambient}=\vec{ka}*Ia
+$$
+
+```c++
+		myEigen::Vector3f ka(0.005, 0.005, 0.005);
+
+		//ambient
+		auto ambient = ka * 50;
+```
+
+#### 漫反射
+
+漫反射是粗糙表面的反射，Blinn-Phong模型认为漫反射即粗糙表面在接收到光线后均匀地反射，也就是定义一个三维颜色向量kd为漫反射系数，直接乘以着色点接收到的irradiance就可以得到着色结果。kd一般来说就是我们看到的粗糙表面的颜色rgb值。
+$$
+\vec{diffuse}=\vec{kd}*irradiance=\vec{kd}*\frac{intensity*cos\theta}{r^2}
+$$
+
+```c++
+		myEigen::Vector3f kd(payload.vertex.vertexColor.bgra[2] / 255.0f, payload.vertex.vertexColor.bgra[1] / 255.0f, payload.vertex.vertexColor.bgra[0] / 255.0f);	
+
+		//diffuse
+		auto pos = myEigen::Vector3f(payload.vertex.vertex.x, payload.vertex.vertex.y, payload.vertex.vertex.z);
+		auto normal = myEigen::Vector3f(payload.vertex.normal.x, payload.vertex.normal.y, payload.vertex.normal.z).Normalize();
+		auto lightdir = (pos - payload.light.position).Normalize();
+		auto r_2 = (pos - payload.light.position).Norm();
+		auto diffuse = kd * std::max(0.0f, myEigen::dotProduct(normal, lightdir)) * payload.light.intensity
+			/ r_2;
+```
+
+#### 高光反射
+
+高光反射用于模拟光滑表面上的反射，Blinn-Phong模型认为高光反射与我们眼睛观察角度、着色点表面法线和光照角度有关，因为镜面反射入射角等于出射角，可想而知如果观察角度刚好处于出射角那么接收到的光线会明显更多。
+
+Blinn-Phong模型给出了如下公式：
+$$
+\vec{h}=\frac{\vec{lightdir}+\vec{eyedir}}{|\vec{lightdir}+\vec{eyedir}|}\\
+\vec{specular}=\vec{ks}*(\vec{h}*\vec{normal})^{Ns}*\frac{intensity*cos\theta}{r^2}
+$$
+除去经验公式特有的系数ks外，高光反射与漫反射不同的地方就是多乘了一个观察角度与光照角度的半程向量和着色点法线的余弦值的Ns次方，这个Ns用来控制高光范围，Ns越大高光范围越小。
+
+值得一提的是，Blinn-Phong模型其实是改进自另一经典模型Phong模型的结果，在Phong模型中半程向量和法线的余弦值被替换成观察角度和光照角度的余弦值，这显然是没有Blinn-Phong模型模拟地更准确的。
+
+```c++
+		myEigen::Vector3f ks(0.7937, 0.7937, 0.7937);
+		//specular
+		auto viewdir = (-pos).Normalize();
+		auto h = (viewdir + lightdir).Normalize();
+		auto specular = ks * payload.light.intensity * std::pow(std::max(0.0f, myEigen::dotProduct(h, normal)),20.0f)
+			/ r_2;
+```
+
+注意一下我们填入的一些常量数值，这些数值需要尽量调试到一个合理的范围内，避免出现曝光过度或者环境光太亮的结果。
+
+#### 着色结果
+
+其实真要是认真看了上面内容的同学应该已经一头雾水了，怎么第一阶段还有模有样地在那儿计算能量和irradiance，第二阶段就啥也不管硬套系数了。
+
+这就是经验模型的缺点，第二阶段的计算完全没有与能量有关的计算，更多的是从经验出发拟合出的一个简单模型，让我们看看这个经验模型的结果。
+
+![BlinnPhong](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450909.gif)
+
+模型来自于Fromsoftware的游戏EldenRing的角色Melina，仅作学习用途！
+
+效果其实还不错，虽然肯定是不符合物理规律的，但是看起来还挺准确。
+
+## MTL文件格式
+
+我们之前已经看过了202酱的MTL文件，但是202酱只使用了一张漫反射纹理，我们需要有更全面的MTL文件。
+
+梅琳娜的模型文件来自于法环的游戏解包，我看MMD区都在用，我拿来用一用应该也没事，源文件为FBX格式，我使用了blender导出为obj-mtl格式，并且顺带把所有png纹理改成了tga纹理。
+
+我们将以梅梅的MTL文件中的其中一个材质定义来看看MTL文件是怎么关联纹理和材质的。
+
+```mtl
+newmtl 40_+cape_0.1_0_0
+Ns 96.078415
+Ka 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 0.000000
+illum 1
+map_Kd Melina_Cloth_D(Baked).tga
+map_Ks Melina_Cloth_S.tga
+map_Bump -bm 1.000000 Melina_Cloth_N(Baked).tga
+```
+
+可以看到上镜的很多都是老朋友，Ns，Ka，Ke，Kd，Ks都在我们之前的公式上出现过，也就是我们的fragment payload中将会加入一个material类绑定上这个片元应该对应的这些Ka，Kd等数据，然后直接在shader中使用这些现成数据即可。至于没出现过的量，Ni为光密度，用于计算折射的时候使用，因为我们的光照模型没有折射，我们也暂时不考虑透明物体的渲染，我们暂时不考虑。同样的，d指dissolve，指的是当前材质溶解于背景的程度，我们也暂时不考虑。
+
+然后是重量级的illum关键字，illum后跟着的数字为0到10中的一个整数，每个整数代表了一种光照模型，具体可以根据这个博客中的讲解来看。
+
+http://www.paulbourke.net/dataformats/mtl/
+
+中文论坛上的关于mtl文件的解析都是直接搬的这篇文章，但是就搬了前面的部分，后面对光照模型的解析完全没搬。。。大家可以直接翻到这篇文章的最后一部分看下光照模型的详细解析。
+
+我这里就搬几个常见的，illum 0对应的是一个只有颜色光照模型，输出颜色公式是color = Kd，不进行任何光照计算。
+
+illum 2对应的就是我们之前写的Blinn-Phong着色模型，而illum 1对应的则是除去了高光的Blinn-Phong模型，只计算环境光和漫反射项。
+
+剩下的几种暂时用不到就先不提了，可以看看文章里怎么写的。
+
+我们可以看到有些变量使用了map前缀，这意味着这个变量的值取自一张纹理贴图的rgb值，每一个顶点都有一个纹理坐标，又称uv，每张纹理我们都会以左下角为原点，建立一个直角坐标系，两个坐标轴分别为u和v，每张纹理的uv坐标范围为[0, 1]，每当我们需要从纹理中读取rgb值的时候都会以这个顶点对应的uv坐标为标准去查询，而uv是一个二维向量，我们只需像法线、顶点颜色那样当成一个顶点的属性即可，我们的所有线性插值和重心坐标插值以及透视矫正都已经在上一节写好了，我们只需要将texcoord也就是uv加进Vertex类就行。
+
+## 纹理映射
+
+### 读取MTL文件
+
+MTL文件的读取我们放在material类的构造函数里：
+
+```c++
+"material.h"
+    
+#pragma once
+#include <string>
 #include "myEigen.hpp"
 #include "tgaimage.h"
 
-namespace rst {
-	struct Vertex
-	{
-		myEigen::Vector4f vertex;
-		TGAColor vertexColor;
-		myEigen::Vector4f normal;
-
-		Vertex& operator=(const Vertex& v) {
-			vertex = v.vertex;
-			vertexColor = v.vertexColor;
-			normal = v.normal;
-			return *this;
-		}
-	};
-
-	inline Vertex lerp(const Vertex& v1, const Vertex& v2, const float t) {
-		return Vertex{
-			lerp(v1.vertex, v2.vertex, t),
-			ColorLerp(v1.vertexColor, v2.vertexColor, t),
-			lerp(v1.normal, v2.normal, t)
-		};
-	}
-}
-
-```
-
-可以看到我们这里用到了一个颜色的插值函数，原本的tgaimage.h里并没有这个函数，这是我自己加的：
-
-```c++
-struct TGAColor {
-    std::uint8_t bgra[4] = { 0,0,0,0 };
-    std::uint8_t bytespp = { 0 };
-
-    TGAColor() = default;
-    TGAColor(const std::uint8_t R, const std::uint8_t G, const std::uint8_t B, const std::uint8_t A = 255) : bgra{ B,G,R,A }, bytespp(4) { }
-    TGAColor(const std::uint8_t* p, const std::uint8_t bpp) : bytespp(bpp) {
-        for (int i = bpp; i--; bgra[i] = p[i]);
-    }
-    std::uint8_t& operator[](const int i) { return bgra[i]; }
-
-    inline TGAColor operator+(const TGAColor& color) const {
-        return TGAColor(bgra[2] + color.bgra[2], bgra[1] + color.bgra[1], bgra[0] + color.bgra[0], bgra[3] + color.bgra[3]);
-    }
-    inline TGAColor operator*(const TGAColor& color) const {
-        return TGAColor(bgra[2] * color.bgra[2], bgra[1] * color.bgra[1], bgra[0] * color.bgra[0], bgra[3] * color.bgra[3]);
-    }
-    inline TGAColor operator*(const float t) const {
-        return TGAColor(bgra[2] * t, bgra[1] * t, bgra[0] * t, bgra[3] * t);
-    }
-};
-
-inline TGAColor ColorLerp(const TGAColor& color1, const TGAColor& color2, float t) {
-    return color1 * (1 - t) + color2 * t;
-}
-```
-
-注意TGAColor类里存储的是bgra而非rgba，不要写反了。
-
-基本上就这样就差不多了，记得修改下三角形类里的成员，都改成新的vertex类。
-
-这样我们后续想给顶点添加属性只需要在这个类里修改就可以。
-
-## 在光栅化之前
-
-在上一节的MVP变换中，其实我们的处理是有一些问题的的，但是我们选择的测试用例并没有暴露出这些问题。
-
-简单来说我们一直强调只有视椎体、正交视体或者是正交投影后的正则视体才可以被渲染，但是我们并没有实质上做剔除或者是裁剪操作，在最后的正则视体空间内，我们将坐标的xy映射到屏幕空间的对应坐标后，并没有对z值操作就直接就光栅化了坐标点。这样虽然正则视体x方向和y方向上的物体确确实实被排除了（被映射到了不属于屏幕空间范围内的坐标），但是近裁剪平面跟远裁剪平面以外的物体并没有被剔除或者裁剪，还是会被渲染到屏幕空间上。
-
-所以我们现在最需要做的就是裁剪与剔除：
-
-### 裁剪(Clip)与剔除(Cull)
-
-##### 注意：我们现在模拟的阶段对应的是GPU渲染管线上的裁剪，而非应用程序阶段的视椎体剔除。一般来说，物体在从cpu发送到gpu之前，我们会先在cpu内对每个物体造一个包围盒，再用包围盒跟视椎体进行计算，剔除那些包围盒都不跟视椎体有任何交叉的物体以减少draw call，而gpu端的剔除粒度更细，面对的对象是那些构成物体的图元。
-
-注意区分裁剪与剔除这两个概念，剔除指的是将一个三角形，或者更准确地说一个图元完全删去。比如完全不在我们的视椎体内的三角形图元，或者物体背面的三角形图元需要被剔除。但是裁剪特指对于那些一部分在视体外，一部分在视体内的那种图元，我们需要对它们进行“裁剪”。
-
-不过其实混用这两个概念应该也没事。。。大家应该都知道彼此在说什么。
-
-裁剪与剔除其实是与MVP变换高度关联的步骤，也可以把这一小章节当做是对于上一节的补充。
-
-虽然说裁剪与剔除看似只是为了加速我们的渲染流程，但实际上如果完全不做裁剪，我们渲染的图像肯定会出错误。大家回忆一下这玩意儿：
-$$
-P\begin{bmatrix}x\\y\\z\\1\end{bmatrix}=
-\begin{bmatrix}nx\\ny\\(n+f)z-fn\\z\end{bmatrix}=>
-\begin{bmatrix}\frac{nx}{z}\\\frac{ny}{z}\\n+f-\frac{fn}{z}\\1\end{bmatrix}
-$$
-可以看出z在透视矩阵变换后变成了一个反比例函数，而x和y则乘以n再除以z，这意味着
-
-1.z为0的时候计算会出错误。
-
-2.n为0时会丢失所有坐标信息。
-
-3.反比例函数则意味着位于摄像机后面的物体的z坐标反而被映射到了一个比摄像机前物体z坐标区间更小的区间，摄像机背后的物体也会被渲染出来。
-
-对于2，我们只需要规定近裁剪平面不能与相机重合就行，最起码也得跟相机有那么一点距离，就像unity里的near clip plane最小值不能为0一样。
-
-而对于1和3，我们只能通过裁剪那些近平面后的图元才能做到正确渲染想要的图像。
-
-对于3发生的原因我们马上就会讨论到。
-
-#### 裁剪位于渲染管线的位置
-
-现在最广泛运用的应该就是齐次坐标裁剪。
-
-这个名词可能有些让人困惑，这就不得不提MVP变换中被我们一笔带过的那个过程了。
-
-我们之前说过，透视投影矩阵会导致坐标的w变成了变换前的z值，想要继续走下一步需要先把坐标每项都除以w，也就是做“透视除法”。
-
-但这里有大学问，做透视除法前的坐标可以看到是一个不折不扣的四维坐标，而它所在的空间被我们称作齐次裁剪空间，或者裁剪空间。我们所说的齐次坐标裁剪也就是在这个空间内进行。当裁剪完毕后，我们才会做透视除法，将空间转换为我们之前说的正则视体，或者简写称作CVV(canonical view volume)，而CVV所在的坐标被我们称作NDC(normalized device coordinates)，也就是归一化设备坐标。注意透视除法并没有把我们的空间变换到哪个新空间，只是变换到了归一化设备坐标系上。
-
-那么是不是我们在裁剪空间就能一下裁剪完所有三角形呢？
-
-应该也可以，但是判断一个三角形和一个box的裁剪非常复杂，比方说想象一个三角形三个顶点都在立方体外，却从中间穿过了立方体的情况，我们应该如何判断呢？
-
-所以我在我的光栅器中简化问题，在齐次空间只做近远平面的裁剪，在屏幕空间再裁剪那些经过映射后跑出屏幕外的顶点。
-
-所以我们先把渲染管线的顺序给分清：
-
-```c++
-	void rasterizer::draw(std::vector<std::shared_ptr<rst::Triangle>>& TriangleList)
-	{
-		Transform projection = Perspective(zneardis, zfardis, fovY, aspect);
-		Transform  mv = Camera(eye_pos, gaze_dir, view_up) * Modeling(myEigen::Vector3f(0),
-			myEigen::Vector3f(1),
-			myEigen::Vector3f(rotateAxis), theta);
-		Transform viewport = Viewport(width, height);
-
-		for (const auto& t : TriangleList)
-		{
-			Triangle NewTriangle = *t;
-
-			//Model Space -> World Space -> Camera Space
-			std::array<myEigen::Vector4f, 3> vert
-			{
-				(mv(t->vertex[0].vertex)),
-				(mv(t->vertex[1].vertex)),
-				(mv(t->vertex[2].vertex))
-			};
-			auto cameraSpacePos = vert;
-
-			//BackCulling
-			if (backCulling) {
-
-			}
-
-			//Transform Normal
-			auto normalMV = mv;
-			normalMV.toNormal();
-			std::array<myEigen::Vector4f, 3> normal
-			{
-				(normalMV(t->vertex[0].normal)),
-				(normalMV(t->vertex[1].normal)),
-				(normalMV(t->vertex[2].normal))
-			};
-
-			//Camera Space -> Homogeneous Clipping Space
-			for (auto& v : vert)
-			{
-				v = projection(v);
-			}
-
-			//Homogeneous Clipping 
-			for (auto& v : vert)
-			{
-				
-			}
-
-			//Homogeneous Clipping Space -> Canonical View Volume(CVV)
-			for (auto& v : vert)
-			{
-				v /= v.w;
-			}
-
-			//Canonical View Volume(CVV) -> Screen Space
-			for (auto& v : vert)
-			{
-				v = viewport(v);
-			}
-
-			for (size_t i = 0; i < 3; i++)
-			{
-				NewTriangle.setVertexPos(i, vert[i]);
-				NewTriangle.setColor(i, t->vertex[i].vertexColor);
-				NewTriangle.setNormal(i, normal[i]);
-			}
-
-			//Viewport Clipping
-			auto NewVert = clip_Cohen_Sutherland(NewTriangle, cameraSpacePos);
-			
-			for (size_t i = 0; i < NewVert.size() - 2; i++)
-			{
-				rasterize_edge_walking(Triangle(NewVert[0], NewVert[1 + i], NewVert[2 + i]), cameraSpacePos);
-			}	
-		}
-	}
-```
-
-#### 为什么不在CVV内做裁剪？
-
-经过上述的讲解，很容易想到的就是我们可以在NDC下对CVV进行裁剪，毕竟CVV是正则视体嘛，一个立方体想做些计算想想就很容易。
-
-但是可惜的是不行。
-
-做透视除法前，我们的z坐标变换前与变换后还是一个简单的线性关系：
-$$
-z^{'}=(n+f)z-fn
-$$
-但是做了透视除法后一切都不一样了，他们变成了一个反比例函数的关系：
-$$
-z^{'}=n+f-\frac{fn}{z}
-$$
-这个过程使得我们之前说的问题3被暴露了出来，感兴趣的可以画画函数曲线，其中n和f都小于0。
-
-画了函数曲线的话就可以看出，位于摄像机后面的物体的z坐标反而被映射到了一个比摄像机前物体z坐标区间更小的区间里，这给我们的裁剪算法反而带来了更多的麻烦，所以我们选择齐次坐标裁剪。
-
-#### 齐次坐标裁剪
-
-##### 我的软件光栅器中齐次坐标裁剪的方式仅供参考，并不代表实际的GPU是怎么处理裁剪系统的。实际的GPU应该只会严格裁剪近远平面的图元来确保光栅化结果正确，而对于屏幕空间即xy平面上，GPU会给一个比我们屏幕空间大得多的矩形来做裁剪判断，这样除非是越界得特别过分的图元，不然不会被裁剪。对于GPU来说，做一些复杂的裁剪算法，还不如让它用蛮力多算几个像素来的快。
-
-齐次裁剪空间其实是一个四维空间，比较不太容易想象。但是我们可以通过这个式子来大致想象一下
-$$
-P\begin{bmatrix}x\\y\\z\\1\end{bmatrix}=
-\begin{bmatrix}nx\\ny\\(n+f)z-fn\\z\end{bmatrix}=>
-\begin{bmatrix}\frac{nx}{z}\\\frac{ny}{z}\\n+f-\frac{fn}{z}\\1\end{bmatrix}
-$$
-因为我们所要得到的透视除法后的空间是CVV，是一个xyz区间皆在[-1, 1]内的正则立方体，我们可以反推得出x，y，z各自的取值范围：
-$$
--|w|<nx<|w|\\
--|w|<ny<|w|\\
-f<w<n
-$$
-其中w为物体透视变换前的z值。而变换前的z值显然需要在近远平面区间内，所以直接得出w的取值范围。（别忘了n和f都是负值）
-
-既然是不等式，那么w的取值范围非常重要，w必须确定是负值还是正值，不然得出的式子肯定不一样，所以我们在这个阶段需要做的就是近远平面的裁剪，将w锁定在负值上。
-
-```c++
-			//Homogeneous Clipping 
-			for (auto& v : vert)
-			{
-				if (v.w > -zneardis || v.w < -zfardis) return;
-			}
-```
-
-#### Cohen-Sutherland算法
-
-##### 三角形的裁剪->线段的裁剪->顶点的裁剪
-
-我们接着在屏幕空间处理那些超出屏幕的三角形，这里我们会用到编码裁剪算法
-
-[科恩－苏泽兰算法 - 维基百科，自由的百科全书 (wikipedia.org)](https://zh.wikipedia.org/wiki/科恩－苏泽兰算法)
-
-可以参考一下这个算法的内容，wiki里的介绍写的非常好，我建议直接看他的原文：
-
-![Cohen-Sutherland](E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\Cohen-Sutherland.png)
-
-需要注意的是，这个裁剪需要对边，也就是线段进行裁剪，而我们三角形使用的是顶点来表示，我们定义一下线段类：
-
-```c++
-	struct Line
-	{
-		Vertex v1;
-		Vertex v2;
-		bool isNull = false;
-
-		Line() :isNull(true){}
-		Line(const Vertex& v1, const Vertex& v2) :v1(v1), v2(v2) {}
-	};
-```
-
-我们照着一步一步来：
-
-首先我们将三角形化成三个线段，并在clip_line函数里对每条线段的两个顶点进行编码
-
-![Cohen-Sutherland_img2](E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\Cohen-Sutherland_img2.png)
-
-```c++
-	std::vector<myEigen::Vector4f> rasterizer::clip_Cohen_Sutherland(const Triangle& t)
-	{
-		auto v = t.vertex;
-
-		std::array<Line, 3> line
-		{
-			Line(v[0], v[1]),
-			Line(v[1], v[2]),
-			Line(v[2], v[0])
-		};
-
-		line[0] = clip_line(line[0]);
-		line[1] = clip_line(line[1]);
-		line[2] = clip_line(line[2]);
-	}
-	Line rasterizer::clip_line(const Line& line)
-	{
-		Vertex v[2];
-		v[0] = line.v1, v[1] = line.v2;
-		int code[2];
-		code[0] = 0, code[1] = 0;
-		const int left = 1;
-		const int right = 2;
-		const int bottom = 4;
-		const int top = 8;
-
-		for (size_t i = 0; i < 2; i++)
-		{
-			if (v[i].vertex.x < 0) code[i] = code[i] | 1;
-			if (v[i].vertex.x > width) code[i] = code[i] | 2;
-			if (v[i].vertex.y < 0) code[i] = code[i] | 4;
-			if (v[i].vertex.y > height) code[i] = code[i] | 8;
-		}
-		
-        ...
-            
-		return Line(v[0], v[1]);
-	}
-```
-
-然后观察这个空间的编码结果来看看怎么对顶点进行裁剪：
-
-![Cohen-Sutherland_img1](E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\Cohen-Sutherland_img1.png)
-
-很显然如果一条线段的两个顶点在同一侧，那么编码上总会有一个数字是相同的，即按位与运算结果不为0，这条线段将被丢弃。
-
-否则将顶点与0001(左)，0010(右), 0100(下), 1000(上)做按位与运算，结果不为零就说明在哪一个区域，我们将插值出新的顶点。
-
-因为我们已经排除了两个顶点在同一侧的情况，所以如果顶点在左侧，那么另一个顶点一定在他右边，且我们可以直接求出插值权重weight=（左边界x - 左顶点x）/（右边界x-左边界x）来计算裁剪后的新顶点。
-
-对于其他区域同理。
-
-我们需要构建一个while大循环来给每一个顶点的两个坐标都进行类似的裁剪，while的退出条件即为两个顶点最终都被裁剪到0000这个区域内或者两个顶点在同一侧，所以循环中的clip_vert函数我们需要实时对编码进行更新：
-
-```c++
-	Line rasterizer::clip_line(const Line& line,
-		const std::array<myEigen::Vector4f, 2>& clipSpacePos)
-	{
-		Vertex v[2];
-		v[0] = line.v1, v[1] = line.v2;
-		int code[2];
-		code[0] = 0, code[1] = 0;
-		const int left = 1;
-		const int right = 2;
-		const int bottom = 4;
-		const int top = 8;
-
-		auto vert1 = v[0];
-		auto vert2 = v[1];
-
-		for (size_t i = 0; i < 2; i++)
-		{
-			if (v[i].vertex.x < 0) code[i] = code[i] | 1;
-			if (v[i].vertex.x > width) code[i] = code[i] | 2;
-			if (v[i].vertex.y < 0) code[i] = code[i] | 4;
-			if (v[i].vertex.y > height) code[i] = code[i] | 8;
-		}
-
-		while (code[0] != 0 || code[1] != 0)
-		{
-			if ((code[0] & code[1]) != 0) return Line();
-			vert1 = clip_vert(vert1, vert2, code[0], code[1], 0, width, 0, height, { clipSpacePos[0], clipSpacePos[1] });
-			vert2 = clip_vert(vert2, vert1, code[1], code[0], 0, width, 0, height, { clipSpacePos[1], clipSpacePos[0] });
-		}
-		return Line(vert1, vert2);
-	}
-```
-
-然后我们来着手实现这个clip_vert函数对顶点进行裁剪并且实时更新编码值。
-
-需要注意的是，我们的顶点经过裁剪后都是落到边界直线上，但是我们更新编码值的方法并没有界定落到边上的顶点如何给定编码，那么我们该怎么做呢？
-
-解决方案很简单，我们以这条线段为例。
-
-<img src="E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\编码图解.png" alt="Cohen-Sutherland_img1" style="zoom:50%;" />
-
-这条线段两个顶点不在同一侧，所以不会被提前删掉，进入第一次顶点裁剪。
-
-先对（x1，y1）进行左裁剪，裁剪后落到左边界这条直线上，我们可以给x坐标加0.001，他就进入了1000区域，而不是落在便捷上了。
-
-那么在下一次循环中这两个顶点就会落到同一侧，while循环就会结束，并返回一条空线段。
-
-```c++
-	static Vertex clip_vert(const Vertex& _v1, const Vertex& _v2, int& code1, const int& code2,
-		const int leftBound, const int rightBound, const int bottomBound, const int topBound, 
-		const std::array<myEigen::Vector4f, 2>& clipSpacePos)
-	{
-		const int left = 1;
-		const int right = 2;
-		const int bottom = 4;
-		const int top = 8;
-
-		auto v1 = _v1;
-		auto& v2 = _v2;
-		if ((left & code1) != 0)
-		{
-			float lerpNumber = (leftBound - v1.vertex.x) / (v2.vertex.x - v1.vertex.x);
-			v1 = perspectiveLerp(_v1, _v2, lerpNumber, clipSpacePos[0], clipSpacePos[1]);
-			v1.vertex = lerp(_v1.vertex, _v2.vertex, lerpNumber);
-			v1.vertex.x += 0.001f;
-		}
-		else if ((right & code1) != 0)
-		{
-			float lerpNumber = (v1.vertex.x - rightBound) / (v1.vertex.x - v2.vertex.x);
-			v1 = perspectiveLerp(_v1, _v2, lerpNumber, clipSpacePos[0], clipSpacePos[1]);
-			v1.vertex = lerp(_v1.vertex, _v2.vertex, lerpNumber);
-			v1.vertex.x -= 0.001f;
-		}
-		else if ((bottom & code1) != 0)
-		{
-			float lerpNumber = (bottomBound - v1.vertex.y) / (v2.vertex.y - v1.vertex.y);
-			v1 = perspectiveLerp(_v1, _v2, lerpNumber, clipSpacePos[0], clipSpacePos[1]);
-			v1.vertex = lerp(_v1.vertex, _v2.vertex, lerpNumber);
-			v1.vertex.y += 0.001f;
-		}
-		else if ((top & code1) != 0)
-		{
-			float lerpNumber = (v1.vertex.y - topBound) / (v1.vertex.y - v2.vertex.y);
-			v1 = perspectiveLerp(_v1, _v2, lerpNumber, clipSpacePos[0], clipSpacePos[1]);
-			v1.vertex = lerp(_v1.vertex, _v2.vertex, lerpNumber);
-			v1.vertex.y -= 0.001f;
-		}
-
-		code1 = 0;
-		if (v1.vertex.x < leftBound) code1 = (code1 | left);
-		if (v1.vertex.x > rightBound) code1 = (code1 | right);
-		if (v1.vertex.y < bottomBound) code1 = (code1 | bottom);
-		if (v1.vertex.y > topBound) code1 = (code1 | top);
-
-		return v1;
-	}
-```
-
-注意一下我们用到的这个插值函数不是我们之前定义的lerp函数，这是因为如果在屏幕空间上对三维或者四维空间中的三角形进行插值的时候需要做透视矫正。
-
-若想详细了解，请往下翻到透视矫正这一小节。
-
-我们的顶点和线段裁剪完后，发送给主函数的是顶点的数组，我们现在需要把他们装成一个个的三角形：
-
-```c++
-std::vector<Vertex> rasterizer::clip_Cohen_Sutherland(const Triangle& t,
-		const std::array<myEigen::Vector4f, 3>& clipSpacePos)
-	{
-		auto v = t.vertex;
-
-		std::array<Line, 3> line
-		{
-			Line(v[0], v[1]),
-			Line(v[1], v[2]),
-			Line(v[2], v[0])
-		};
-
-		line[0] = clip_line(line[0], { clipSpacePos[0], clipSpacePos[1] });
-		line[1] = clip_line(line[1], { clipSpacePos[1], clipSpacePos[2] });
-		line[2] = clip_line(line[2], { clipSpacePos[2], clipSpacePos[0] });
-
-		for (size_t i = 0; i < 2; i++)
-		{
-			if (line[i].isNull)
-			{
-				if (i == 0) {
-					line[i].v1 = line[2].v2;
-					line[i].v2 = line[1].v1;
-				}
-				else if (i == 1)
-				{
-					line[i].v1 = line[0].v2;
-					line[i].v2 = line[2].v1;
-				}
-				else if (i == 2)
-				{
-					line[i].v1 = line[1].v2;
-					line[i].v2 = line[0].v1;
-				}
-			}
-		}
-
-		std::vector<Vertex> newVert;
-		newVert.reserve(3);
-
-		if (fabs(line[2].v2.vertex.x - line[0].v1.vertex.x) < 0.0001f && fabs(line[2].v2.vertex.y - line[0].v1.vertex.y) < 0.0001f)
-		{
-			newVert.emplace_back(line[0].v1);
-		}
-		else
-		{
-			newVert.emplace_back(line[2].v2);
-			newVert.emplace_back(line[0].v1);
-		}
-		if (fabs(line[0].v2.vertex.x - line[1].v1.vertex.x) < 0.0001f && fabs(line[0].v2.vertex.y - line[1].v1.vertex.y) < 0.0001f)
-		{
-			newVert.emplace_back(line[1].v1);
-		}
-		else
-		{
-			newVert.emplace_back(line[0].v2);
-			newVert.emplace_back(line[1].v1);
-		}
-		if (fabs(line[1].v2.vertex.x - line[2].v1.vertex.x) < 0.0001f && fabs(line[1].v2.vertex.y - line[2].v1.vertex.y) < 0.0001f)
-		{
-			newVert.emplace_back(line[2].v1);
-		}
-		else
-		{
-			newVert.emplace_back(line[1].v2);
-			newVert.emplace_back(line[2].v1);
-		}
-
-		return newVert;
-	}
-```
-
-让我们看看结果：
-
-<img src="E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\裁剪.gif" alt="裁剪"  />
-
-大功告成！看起来是没有什么问题。不过旋转方向跟上一节的相反了，这不是我代码哪里写错了，是因为我现在才发现上一节做gif的时候图片顺序搞反了。。。导致上一节的旋转方向是反的，因为是“倒放”。
-
-### Z坐标映射
-
-还记得我们上一节做视口变换的时候是怎么做的吗？直接将x和y坐标映射到屏幕空间里。
-
-那么问题来了，z坐标真的就一点也不用动吗？
-
-我们来看看刚进入CVV时的z坐标跟初始的z坐标相比有什么变化：
-$$
-z^{'}=n+f-\frac{fn}{z}
-$$
-
-
-### 背面剔除
-
-很多时候，如果一个三角形背对着我们的时候，我们可以直接把他们剔除掉，因为大部分时候，我们处理的模型都是闭合模型，所以只需要渲染三角形朝向外面的面，对于三角形朝向内部的面我们直接剔除，可以大大减小算力。
-
-这个做起来很简单，如果三角形顶点绕序是逆时针的话，我们用顶点依次相减得出两个三角形内部向量，再叉乘得到的法向量应该是指向摄像机的，我们再将三角形任意一个点跟摄像机位置连成一个向量，这两个向量点积得出的结果应该是负数，若不是负数则意味着是背面，需要剔除。
-
-顶点绕序是顺时针的话反过来就行了。
-
-相机空间的相机坐标是(0, 0, 0)，显然最适合做背面剔除，而且三角形光栅化可能会改变顶点顺序，所以相机空间做背面剔除无疑是非常合适的：
-
-```c++
-void rasterizer::TurnOnBackCulling()
+namespace rst
 {
-    this->backCulling = true;
+	class Material
+	{
+	public:
+		Material() = default;
+		Material(const std::string& filename, const std::string& root, const std::string& materialName);
+	public:
+		std::string name;
+
+		myEigen::Vector3f Ke;
+		myEigen::Vector3f Kd;
+		myEigen::Vector3f Ka;
+		myEigen::Vector3f Ks;
+		float illum;
+		float Ns;
+		float d;
+		float Ni;
+
+		TGAImage map_Ke;
+		TGAImage map_Kd;
+		TGAImage map_Ka;
+		TGAImage map_Ks;
+		TGAImage map_Ns;
+		TGAImage map_d;
+
+		float Bump;
+		TGAImage map_Bump;
+	};
 }
-void rasterizer::TurnOffBackCulling()
+
+"material.cpp"
+
+#include "material.h"
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+
+namespace rst
 {
-    this->backCulling = false;
+	Material::Material(const std::string& filename, const std::string& root, const std::string& materialName)
+	{
+		name = materialName;
+
+		std::ifstream mtl;
+		mtl.open(root + filename, std::ifstream::in);
+		if (mtl.fail())
+		{
+			std::cerr << "Cannot open:" << filename << std::endl;
+			return;
+		}
+		std::string mtlLine;
+		std::vector<std::string> mtlDescribe;
+		bool isWrite = false;
+		while (!mtl.eof())
+		{
+			std::getline(mtl, mtlLine);
+
+			if (mtlLine.compare(0, 7, "newmtl ") == 0)
+				if (mtlLine.compare(7, materialName.size(), materialName) == 0)
+					isWrite = true;
+
+			if(isWrite)
+			{
+				if (mtlLine.size() == 0) break;
+				mtlDescribe.push_back(mtlLine);
+			}
+		}
+		for (auto& s : mtlDescribe)
+		{
+			std::istringstream iss(s);
+			std::string header;
+			char trash;
+			if (s.compare(0, 3, "Ns ") == 0)
+			{
+				iss >> header;
+				iss >> Ns;
+			}
+			else if (s.compare(0, 3, "Ke ") == 0)
+			{
+				iss >> header;
+				iss >> Ke.x >> Ke.y >> Ke.z;
+			}
+			else if (s.compare(0, 3, "Ka ") == 0)
+			{
+				iss >> header;
+				iss >> Ka.x >> Ka.y >> Ka.z;
+			}
+			else if (s.compare(0, 3, "Kd ") == 0)
+			{
+				iss >> header;
+				iss >> Kd.x >> Kd.y >> Kd.z;
+			}
+			else if (s.compare(0, 3, "Ks ") == 0)
+			{
+				iss >> header;
+				iss >> Ks.x >> Ks.y >> Ks.z;
+			}
+			else if (s.compare(0, 2, "d ") == 0)
+			{
+				iss >> header;
+				iss >> d;
+			}
+			else if (s.compare(0, 3, "Ni ") == 0)
+			{
+				iss >> header;
+				iss >> Ni;
+			}
+			else if (s.compare(0, 6, "illum ") == 0)
+			{
+				iss >> header;
+				iss >> illum;
+			}
+			else if (s.compare(0, 7, "map_Ke ") == 0)
+			{
+				std::string textureName;
+				iss >> header;
+				iss >> textureName;
+				map_Ke = TGAImage();
+				map_Ke.read_tga_file(root + textureName);
+				map_Ke.flip_vertically();
+			}
+			else if (s.compare(0, 7, "map_Ka ") == 0)
+			{
+				std::string textureName;
+				iss >> header;
+				iss >> textureName;
+				map_Ka = TGAImage();
+				map_Ka.read_tga_file(root + textureName);
+				map_Ka.flip_vertically();
+			}
+			else if (s.compare(0, 7, "map_Kd ") == 0)
+			{
+				std::string textureName;
+				iss >> header;
+				iss >> textureName;
+				map_Kd = TGAImage();
+				map_Kd.read_tga_file(root + textureName);
+				map_Kd.flip_vertically();
+			}
+			else if (s.compare(0, 7, "map_Ks ") == 0)
+			{
+				std::string textureName;
+				iss >> header;
+				iss >> textureName;
+				map_Ks = TGAImage();
+				map_Ks.read_tga_file(root + textureName);
+				map_Ks.flip_vertically();
+			}
+			else if (s.compare(0, 7, "map_Ns ") == 0)
+			{
+				std::string textureName;
+				iss >> header;
+				iss >> textureName;
+				map_Ns = TGAImage();
+				map_Ns.read_tga_file(root + textureName);
+				map_Ns.flip_vertically();
+			}
+			else if (s.compare(0, 6, "map_d ") == 0)
+			{
+				std::string textureName;
+				iss >> header;
+				iss >> textureName;
+				map_d = TGAImage();
+				map_d.read_tga_file(root + textureName);
+				map_d.flip_vertically();
+			}
+			else if (s.compare(0, 9, "map_Bump ") == 0)
+			{
+				std::string textureName;
+				iss >> header >> header >> Bump;
+				iss >> textureName;
+				map_Bump = TGAImage();
+				map_Bump.read_tga_file(root + textureName);
+				map_Bump.flip_vertically();
+			}
+		}
+	}
 }
-			...
-			//BackCulling
-			if (backCulling) {
-				auto v1 = vert[1] - vert[0];
-				auto v2 = vert[2] - vert[1];
-				auto v = myEigen::crossProduct(myEigen::Vector3f(v1.x, v1.y, v1.z), myEigen::Vector3f(v2.x, v2.y, v2.z));
-				auto gaze = myEigen::Vector3f(vert[0].x, vert[0].y, vert[0].z);
-				if (vertexOrder == TriangleVertexOrder::counterclockwise)
+```
+
+可以看到我们每次读取纹理文件的时候都会水平翻转图像，这是因为我在之前测试的时候怎么也写不对纹理映射，后来我把纹理读了再原封不动输出才发现tgaimage.cpp读取的纹理文件竟然是水平翻转的，具体原因我暂时也没排查出为什么，我猜测也许是tga文件头里的imagedescriptor的读取出了问题？但是使用blender是可以正常打开并且渲染正确的，我觉得也许是代码的问题。但是anyway，我们就先这样翻转着吧，纹理映射的重点还在后头，就是翻转函数的开销其实比较大，给我们的纹理和模型读取陡增了一些计算时间。
+
+### 双线性插值
+
+接下来我们有了material，将它传到fragmentpayload里就可以在shader里读取相关信息了。
+
+但是对于使用纹理存储的变量信息，我们需要根据uv坐标从图上读取出来。
+
+听起来很简单，tga解析器为我们提供了set和get的方法，直接get不就行了？
+
+但是我们的uv坐标在乘以tga的长宽之后显然都是打乱的，几乎不可能恰好取在像素中心，那对于这些采样点我们怎么找他的对应颜色呢？我们当然可以直接找到离采样点最近的像素中心坐标，返回这个像素的rgb值，这种方法被称作nearest，取最近点。
+
+但我们有更准确且比较清晰的办法，那就是双线性插值。
+
+我们之前的线性插值都是一维的两个点，但在纹理这种二维平面上可不使用，可以看这个示意图：
+
+![BilinearInterpolation](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450986.png)
+
+这张图很显然来自games101闫令琪老师的课件。
+
+图里写的非常明白，还附上了伪代码，可以看出就是做三次插值，水平方向两次竖直方向一次，当然反过来应该也是没问题的。
+
+需要时刻注意像素中心坐标不是整数而是x.5的小数。
+
+同时除了插值以外还有一件比较重要的事，就是纹理环绕方式。
+
+uv坐标虽然我们都是基于[0, 1]范围内讨论的，但有时候我们会用到超出这个范围的uv坐标，这时候我们怎么处理这些超范围的坐标？
+
+当然也是有多种方法，大部分情况下默认repeat，就是大于1就再从0开始递增，相当于纹理在边缘处重复，这有点像桌面壁纸平铺的表现形式。
+
+也有其他的情况，比如超出范围就重复边缘处的像素颜色，或者干脆超出范围就不画了，也是可以的，但是最广泛的还是repeat的形式。
+
+```c++
+	inline TGAColor bilinearInterpolate(const TGAImage& texture, float u, float v)
+	{
+		//return texture.get(u, v);
+		while (u > texture.width())
+		{
+			u -= texture.width();
+		}
+		while (v > texture.height())
+		{
+			v -= texture.height();
+		}
+		while (u < 0)
+		{
+			u += texture.width();
+		}
+		while (v < 0)
+		{
+			v += texture.height();
+		}
+
+		float uu = u - 0.5f;
+		float vv = v - 0.5f;
+
+		auto c_u1 = myEigen::Vector2f(ceil(uu), floor(vv));
+		auto f_u1 = myEigen::Vector2f(floor(uu), floor(vv));
+
+		TGAColor u_interpolated1 = ColorLerp(texture.get(f_u1.x, f_u1.y), texture.get(c_u1.x, c_u1.y), uu - floor(uu));
+
+		auto c_u2 = myEigen::Vector2f(ceil(uu), ceil(vv));
+		auto f_u2 = myEigen::Vector2f(floor(uu), ceil(vv));
+
+		TGAColor u_interpolated2 = ColorLerp(texture.get(f_u2.x, f_u2.y), texture.get(c_u2.x, c_u2.y), uu - floor(uu));
+
+		TGAColor out = ColorLerp(u_interpolated2, u_interpolated1, vv - floor(vv));
+		return out;
+	}
+```
+
+至于调用这个函数的代码有点过于冗长了，我就不放在这里了，感兴趣的可以直接从我的代码仓库里查看。
+
+我们看一下渲染效果：
+
+![双线性插值](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450077.gif)
+
+其实到现在debug模式已经有点吃力了，渲染72帧起码180秒往上，其实占用开销大头的还是纹理读取，我现在都快常驻release模式了，这72帧在release模式下算上模型和纹理加载也就30秒上下，我开的是-O2优化。
+
+有个值得一提的事，那就是我发现mtl文件里梅梅的大部分光照模型都是illum 1，也就是不考虑高光反射，但是所有梅梅模型的所有部分都配了高光反射纹理，也就是map_Ks。
+
+这显然是不合理的，问题应该出在fbx和obj-mtl格式的转换上，所以我擅做主张把梅梅的mtl文件里的illum 1全部改成了illum 2。
+
+看看效果：
+
+![高光贴图](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450171.gif)
+
+可以看到最明显的应该是靴子上的高光。
+
+### 法线贴图
+
+说了这么多，其实mtl文件里有一项一直没被我们用到，那就是map_Bump。
+
+我们之前说不管是纹理贴图还是直接写在mtl文件里，都是为了用存储在外部的数据来替换我们公式里的一些变量，自然而然的，表面法线作为一个重要变量显然也可以被替换。
+
+怎么通过一张图来记录表面法线的信息，这不是一个简单的话题。
+
+#### 凹凸贴图
+
+比较原始的一种方案称作凹凸贴图，用一张灰度图来记录高度信息，越亮的像素越“高”，或者说越凸。
+
+这种方法现在用的比较少了，games101中一开始讲的也是凹凸贴图的原理，可以去看视频里怎么说的。
+
+#### 法线贴图
+
+我们的重点还是法线贴图。因为法线在经过标准化后，xyz三个分量基本上就在-1到1的区间内，所以可以很简单地映射到0到255的颜色信息上表示。
+
+说到这里最容易想到的就是直接跟漫反射贴图啥的一样，给每一个uv对应一个颜色存储法线信息，使用的时候直接采样出来直接替换。
+
+这种方式准确的说叫做世界空间法线贴图。以下是一张世界空间法线贴图的例子。
+
+![diablo3_pose_nm](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450282.png)
+
+这张贴图来自于tinyrenderer的迪亚波罗的世界空间法线贴图。可以看到比较五颜六色，使用的时候很方便直接采样就可以。
+
+但是如果我们需要人物做一些动作呢，人物一旦做了一些动作之后，这个法线贴图似乎就不怎么起效了，因为这里的法线指向都是写死的，假设人物只是把手掌翻了一个面，我们的法线读取都会出现问题。
+
+所以我们更多使用的是切线空间法线贴图，以下是另一个例子：
+
+![diablo3_pose_nm_tangent](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450379.png)
+
+这个是切线空间法线贴图，这里存储的信息跟上一张贴图是一模一样的，也是来自tinyrenderer的贴图。
+
+简单来说，就是我们在模型的每个表面构建TBN三个向量作为切线空间的三个基向量。这三个向量分别为Tangent, Bitangent, normal三个向量，所以简写为TBN。
+
+其中，T和B向量分别指向模型u和v在三维空间中延伸的方向，这样说可能比较抽象，需要想象一下。每个模型表面上的点都会有他专属的uv坐标，我们聚焦到模型表面的一个最简单的三角面，就像下面这张图，我们图里画的红线和蓝线就是u和v两个量在三维空间中的“**等势面**”。
+
+![grid_texture](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450484.png)
+
+而N向量就是每个顶点原本的法线，由此我们构建出了一个局部坐标系，我们在切线空间法线贴图中采样到的值就是基于这个局部坐标系的。
+
+**（实际上我说的也不是完全准确。我们规定N向量必须与T和B向量垂直。很显然对于如图所示的扁平的三角形面内，TB看似应该是两个固定的向量，然而因为三角形内的每个顶点对应的法线并不一样，我们构建TBN空间需要明确N与TB垂直，所以实际上对于每个顶点，我们都需要根据每个顶点所拥有的具体的法线值来将这个三角形内的T和B向量稍稍旋转一下来做到跟N向量垂直。这个矛盾主要是因为虽然我们用三角形来模拟物体表面，但是实际上我们做的顶点插值等工作超越了简单的三角形，做到了用三角形来模拟复杂表面的结果，所以我们不能再简单地将物体表面看做是三角形，也就是说我们要求的T和B向量并不是uv在三角形内延伸的方向，而是具体到每一个顶点上延伸的方向）**
+
+所以我们在采样完了法线贴图中的值后，我们需要做的就是将这个法线从局部坐标系变换到模型坐标系，然后再替换掉原有的法线值，这样法线贴图才能正常运作。
+
+这一整串步骤的难点就在于如何得到一个变换矩阵，用来将这个法线从切线空间转换为模型坐标系，这个变换矩阵我们一般也称作TBN矩阵。
+
+我们之前讨论过坐标系变换矩阵怎么写，因为这里不涉及到位置的变换，所以只用一个3x3矩阵就可以做到，同时这个3x3矩阵第一列，第二列和第三列分别为TBN三个向量在模型空间中的值。
+
+N向量就是原本的法线向量，这个不用管，重点在于T和B，我们该如何得到三维空间中u和v的延伸方向向量？
+
+我们看上面的图可以想象，先只关注红线，也就是u的**等势面**，或者可以理解成**等高线**，我们真正想要求得的是u向量本身，也就是这个我们画出来的等高线的**梯度**（gradient），梯度有一个比较简单的求法，假设我们有一个线性函数。$$u=f(x, y, z)=Ax+By+Cz+D$$，这个线性函数的梯度就是(A, B, C)，也就是T向量就是(A, B, C)。同样我们也可以令v=f(x, y, z)，写出一个关于v的线性函数，对他求梯度就可以得到B向量了，最后的N向量就直接使用正交化后的顶点法线就可以了。
+
+我们用以上思路来以p0, p1, p2三个顶点的数据为基础来求解一下T向量：
+$$
+u_0=u(p_0)=Ax_0+By_0+Cz_0+D\\
+u_1=u(p_1)=Ax_1+By_1+Cz_1+D\\
+u_2=u(p_2)=Ax_2+By_2+Cz_2+D\\
+u_1-u_0=A(x_1-x_0)+B(y_1-y_0)+C(z_1-z_0)\\
+u_2-u_0=A(x_2-x_0)+B(y_2-y_0)+C(z_2-z_0)
+$$
+就只靠后面两个方程可求不出一个唯一解，我们还需要根据N和TB垂直来写出第三个方程组来计算出唯一解。
+
+**（这里第三个方程组实际上就对应着我前面括号内所说的将三角形内看似固定的T和B向量“旋转”到合适位置的过程，如果这个三角形内的所有顶点的法线都相同，也就是使用面法线代替顶点法线，那么三角形内的T和B向量就真的是“固定”的向量了，但大多数时候我们用的插值得到的顶点法线，所以每个顶点对应的T和B向量各不相同）**
+$$
+0=(A,B,C)\cdot{\vec{N}}=\vec{T}\cdot{\vec{N}}
+$$
+我们将上面两个方程也改写成向量点乘形式：
+$$
+\vec{T}\cdot{\vec{p_1p_0}}=u_1-u_0\\
+\vec{T}\cdot{\vec{p_2p_0}}=u_2-u_0\\
+\vec{T}\cdot{\vec{N}}=0\\
+$$
+求解这个方程组很简单，改写成矩阵形式就行：
+$$
+\begin{bmatrix}\vec{p_1p_0}\\
+\vec{p_2p_0}\\
+\vec{N}
+\end{bmatrix}
+\cdot\vec{T}=\begin{bmatrix}u_1-u_0\\u_2-u_0\\0\end{bmatrix}
+$$
+
+$$
+\vec{T}=\begin{bmatrix}\vec{p_1p_0}\\
+\vec{p_2p_0}\\
+\vec{N}
+\end{bmatrix}^{-1}\begin{bmatrix}u_1-u_0\\u_2-u_0\\0\end{bmatrix}
+$$
+
+对于B向量也可以如法炮制：
+$$
+\vec{B}=\begin{bmatrix}\vec{p_1p_0}\\
+\vec{p_2p_0}\\
+\vec{N}
+\end{bmatrix}^{-1}\begin{bmatrix}v_1-v_0\\v_2-v_0\\0\end{bmatrix}
+$$
+这样我们就求出T向量和B向量了，带上原本的N向量就可以构建出一个切线空间了。
+
+需要注意的是，我们这里使用到了三角形的顶点信息，所以我这里顺带将之前的MVP矩阵变换单独封装成了vertex shader，顺带可以跟我们现在写的fragment shader数据互通。
+
+```c++
+                float u = vertex.texcoord.x;
+                float v = vertex.texcoord.y;
+                float w = material->map_Bump[mipmap_level].width();
+                float h = material->map_Bump.height();
+                TGAColor uv = bilinearInterpolate(material->map_Bump,
+                    u * w, v * h);
+
+                myEigen::Vector3f uv_vec((double)uv.bgra[2] * 2.0f / 255.0 - 1.0f,
+                                         (double)uv.bgra[1] * 2.0f / 255.0 - 1.0f,
+                                         (double)uv.bgra[0] * 2.0f / 255.0 - 1.0f);
+
+                myEigen::Vector3f			n = uv_vec.Normalize();
+
+                myEigen::Vector3f        p1p0 = (tri_cameraspace.vertex[1].vertex - tri_cameraspace.vertex[0].vertex).xyz();
+                myEigen::Vector3f        p2p0 = (tri_cameraspace.vertex[2].vertex - tri_cameraspace.vertex[0].vertex).xyz();
+                myEigen::Vector3f	       fu = myEigen::Vector3f(tri_cameraspace.vertex[1].texcoord.x - tri_cameraspace.vertex[0].texcoord.x,
+                                                                  tri_cameraspace.vertex[2].texcoord.x - tri_cameraspace.vertex[0].texcoord.x, 0.0f);
+                myEigen::Vector3f	       fv = myEigen::Vector3f(tri_cameraspace.vertex[1].texcoord.y - tri_cameraspace.vertex[0].texcoord.y,
+                                                                  tri_cameraspace.vertex[2].texcoord.y - tri_cameraspace.vertex[0].texcoord.y, 0.0f);
+                myEigen::Matrixf3x3         A = myEigen::Matrix3x3Transpose(myEigen::Matrixf3x3(p1p0, p2p0, Normal));
+                auto				A_inverse = myEigen::Matrix3x3Inverse(A);
+                auto				A_inverse = myEigen::Matrix3x3Inverse(A);
+
+                myEigen::Vector3f           T = A_inverse * fu;
+                myEigen::Vector3f           B = A_inverse * fv;
+
+                myEigen::Matrixf3x3 TBN(T.Normalize(), B.Normalize(), Normal);
+                Normal = (TBN * n).Normalize();
+```
+
+我们来看看渲染结果：
+
+![Normalmap](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450559.gif)
+
+可以跟之前的结果对比一下，最明显的差别就是靴子上和手臂袖子上的褶皱。可以说效果非常的棒。
+
+### Mipmap
+
+本章的最后一项内容就是mipmap。
+
+当我们采样的贴图精度过大，而渲染区域又过小的时候，我们的采样结果会出现失真。
+
+什么情况才叫过大？就是当屏幕上跨越一格像素，对应的纹理采样跨越了远超一格像素的时候。就像我们现在渲染的梅琳娜，她使用的纹理都是4096x4096的，而我们渲染的图片也就700x700的大小，毫无疑问就会出现这种摩尔纹现象，但是比较轻微。
+
+![mipmap演示](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450641.gif)
+
+可以参考左边的图片，产生的这种纹路我们称之为摩尔纹，是一种失真的表现，而我们对应的反走样策略就是mipmap。
+
+可以对比左右两张图来观察mipmap做了什么，实际上mipmap的就是在远处将贴图精度适当降低，达到一种“模糊”的效果。
+
+在gpu渲染中，mipmap的生成属于是gpu集成的算法，在opengl里只要寥寥几行就可以自动开启mipmap，而现在我们需要聚焦mipmap的相关算法。
+
+其实mipmap的算法说起来非常的简单，我们只需要在读取纹理的时候自动生成低精度的纹理即可，假设我们有一张1024x1024的纹理，那么我们读取这个纹理的时候会自动在内存中创建512x512、256x256、128x128一直到1x1的对应纹理，至于这个过程怎么创建，其实就是每四格像素取平均合成一个像素即可。当我们需要采样纹理的时候，我们就会从对应的mipmap层级的纹理进行采样。
+
+我们先把容易的部分也就是加载mipmap的代码写好：
+
+```c++
+	int calculate_mipmaplevels(int mipmap_width, int mipmap_height)
+	{
+		int mipmap_levels = 1;
+		int size = std::min(mipmap_width, mipmap_height);
+		while (size > 1)
+		{
+			mipmap_levels++;
+			size = std::max(1, size / 2);
+		}
+		return mipmap_levels;
+	}
+
+	std::vector<TGAImage> generateMipmap(const TGAImage& texture)
+	{
+		std::vector<TGAImage> mipmap;
+
+		int mipmap_width = texture.width();
+		int mipmap_height = texture.height();
+
+		int mipmap_levels = calculate_mipmaplevels(mipmap_width, mipmap_height);
+
+		for (int level = 0; level < mipmap_levels; level++)
+		{
+			TGAImage mipmap_level_data(mipmap_width, mipmap_height, TGAImage::RGB);
+			for (int y = 0; y < mipmap_height; y++)
+			{
+				for (int x = 0; x < mipmap_width; x++)
 				{
-					if (myEigen::dotProduct(v, gaze) >= 0) return;
+					int image_x = x * texture.width() / mipmap_width;
+					int image_y = y * texture.height() / mipmap_height;
+					TGAColor pixel = texture.get(image_x, image_y);
+
+					mipmap_level_data.set(x, y, pixel);
 				}
-				else
-				{
-					if (myEigen::dotProduct(v, gaze) <= 0) return;
-				}
 			}
-```
 
-但是背面剔除是一个需要选择开启的功能，因为他对模型提出了闭合的要求，如果对于像草、树叶这些不闭合的模型来说，我们不能开启背面剔除，否则草只能看到一个面，我们绕到背面去看草就消失了，这肯定是不对的。而且为了演示方便，这一节里我也不会开启背面剔除。
+			mipmap.push_back(mipmap_level_data);
 
-## 三角形光栅化
-
-接下来我们要做的就是给三角形内部进行填色，我们将不只是满足于之前的线框渲染模式，我们将渲染出实心三角形。
-
-三角形光栅化，说白了就是两个步骤，第一步是如何找到需要被光栅化的点，第二部是给需要被光栅化的点插值出需要的颜色、法线等属性。
-
-### Edge Walking
-
-Edge Walking是一种常用于CPU软光栅的一种算法，有的人会把他称作扫描线算法，因为确实很像一根扫描线在上下来回扫描。
-
-因为线段可以当做点的集合。那么我们不再计算孤立的一个点是否在三角形内，而是用水平的线来代替点。然后找到这条线与三角形的两个交点，自然两个交点中间的所有点都是我们这条线上的在三角形内部的点了。然后我们将线段往上移动一个像素再重复上述操作，直到三角形被“扫描”完全为止，这里的线段我们称之为“扫描线”。
-
-我们先把三角形以y坐标第二大的顶点为界分为两个部分，上三角形和下三角形。
-
-![scanline](E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\scanline.png)
-
-```c++
-	void rasterizer::rasterize_edge_walking(const Triangle& m)
-	{
-		Triangle t = m;
-		if (t.vertex[0].vertex.y > t.vertex[1].vertex.y)
-			std::swap(t.vertex[0], t.vertex[1]);
-		if (t.vertex[0].vertex.y > t.vertex[2].vertex.y)
-			std::swap(t.vertex[0], t.vertex[2]);
-		if (t.vertex[1].vertex.y > t.vertex[2].vertex.y)
-			std::swap(t.vertex[1], t.vertex[2]);
+			mipmap_width = std::max(1, mipmap_width / 2);
+			mipmap_height = std::max(1, mipmap_height / 2);
+		}
+		return mipmap;
 	}
 ```
 
-这样我们给三角形的顶点按从下到上排了个序，分界线就在vertex[2].vertex.y这根线上。
+难点是采样的时候怎么计算对应的mipmap层级，参考下图：
 
-然后再对每个分割出来的三角形从下到上做扫描线，求出扫描线同三角形边相交的点。
+![mipmaplevel](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450735.png)
 
-这里求交点其实不需要靠什么直线方程来解决，可以直接通过线性插值来得到交点的坐标以及颜色等等。线性插值的系数t可通过当前扫描线的y坐标得到。
+我们需要知道在屏幕空间中跨越一格像素的时候，uv的增量是多少，也就是uv的变化量的模长，然后在生成好的mipmap中找到对应的纹理，使得屏幕空间跨越一格像素时，uv的增量接近于1。
 
-然后用这两个点给线段中的每一个像素再进行一次线性插值。这里给出下半部分三角形的代码：
+那么问题就在于我们怎么访问到一格像素的相邻像素，实际上，在现代的计算机gpu渲染中，并不是1个1个像素进行渲染的，比较常见的会使用2x2的像素进行渲染，对于这4个像素，我们会计算ddx和ddy，也就是x方向上跨越一格像素时uv的变化量以及y方向上跨越一格像素时uv的变化量（实际上不一定是uv的变化量，可以换成任意顶点属性的变化量），然后对于这4个像素我们会共用ddx和ddy的数值。
 
-```c++
-		float longEdge = t.vertex[2].vertex.y - t.vertex[0].vertex.y;
-		if (longEdge == 0) { return; }
+那么我们现在要改造一下我们的光栅化代码，从原本的1个像素1个像素渲染的方式改进为一次传入四个像素。
 
-		//scan the bottom triangle
-		for (int y = std::ceil(t.vertex[0].vertex.y - 0.5f); y < std::ceil(t.vertex[1].vertex.y - 0.5f); y++)
-		{
-			float shortEdge = t.vertex[1].vertex.y - t.vertex[0].vertex.y;
-
-			float shortLerp = ((float)y + 0.5f - t.vertex[0].vertex.y) / shortEdge;
-			float longLerp = ((float)y + 0.5f - t.vertex[0].vertex.y) / longEdge;
-			
-			Vertex shortVertex = lerp(t.vertex[0], t.vertex[1], shortLerp);
-			Vertex longVertex = lerp(t.vertex[0], t.vertex[2], longLerp);
-
-			if (shortVertex.vertex.x > longVertex.vertex.x)
-				std::swap(shortVertex, longVertex);
-			for (int i = std::ceil(shortVertex.vertex.x - 0.5f); i < std::ceil(longVertex.vertex.x - 0.5f); i++)
-			{
-				float lerpNumber = ((float)i + 0.5f - shortVertex.vertex.x) / (longVertex.vertex.x - shortVertex.vertex.x);
-				Vertex pixel = lerp(shortVertex, longVertex, lerpNumber);
-				image.set(i, y, pixel.vertexColor);
-			}
-		}
-```
-
-一定要注意精度问题！切记我们用屏幕中心的点的坐标来当做实际位置进行线性插值，但是image.set()里传入的两个int类型的坐标为像素左下角的坐标，一定要分清楚这个， 不然要么渲染相邻三角形的时候可能会出现缝隙，要么我们以后做抗锯齿的时候会很痛苦。
-
-我们一般认为一个像素的中心在三角形内，那么这个像素就在三角形内。但如果三角形的边缘刚好穿过像素中心呢？从我们的代码可以看出来，一条扫描线穿过时，如果起点正好在像素中心，那么我们认为这个像素也在三角形内，但是终点如果在像素中心，那么我们认为这个像素不在三角形内。而如果是切割三角形的那条线穿过像素中心的话，我们认为这个像素属于下面那个三角形。看起来挺随意，但是可不能乱来，这都是有讲究的，我们在介绍另一种光栅化算法的时候将会着重提到具体的规则。
-
-再加上渲染上半部分三角形的代码：
+因为edge walking的改造相对有点难度，所以我们将光栅化方式全面换成edge equation，并且对edge equation进行修改：
 
 ```c++
-		//scan the top triangle
-		for (int y = std::ceil(t.vertex[1].vertex.y - 0.5f); y < std::ceil(t.vertex[2].vertex.y - 0.5f); y++)
-		{
-			float shortEdge = t.vertex[2].vertex.y - t.vertex[1].vertex.y;
-
-			float shortLerp = ((float)y + 0.5f - t.vertex[1].vertex.y) / shortEdge;
-			float longLerp = ((float)y + 0.5f - t.vertex[0].vertex.y) / longEdge;
-
-			Vertex shortVertex = lerp(t.vertex[1], t.vertex[2], shortLerp);
-			Vertex longVertex = lerp(t.vertex[0], t.vertex[2], longLerp);
-			
-			if (shortVertex.vertex.x > longVertex.vertex.x)
-				std::swap(shortVertex, longVertex);
-			for (int i = std::ceil(shortVertex.vertex.x - 0.5f); i < std::ceil(longVertex.vertex.x - 0.5f); i++)
-			{
-				float lerpNumber = ((float)i + 0.5f - shortVertex.vertex.x) / (longVertex.vertex.x - shortVertex.vertex.x);
-				Vertex pixel = lerp(shortVertex, longVertex, lerpNumber);
-				image.set(i, y, pixel.vertexColor);
-			}
-		}
-```
-
-当然为了代码简洁我们肯定需要试着将这两个for循环合并到一起，不过这样又不是不能跑，我懒得写在一起，就先这样了，看看渲染结果：
-
-![edgewalking](E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\edgewalking.gif)
-
-看着挺对的，可实际上对吗？
-
-<img src="E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\不对.webp" alt="不对" style="zoom:50%;" />
-
-我们的插值其实并不对，还记得我们说过透视变换不是线性变换吗？那么屏幕空间的线性插值怎么能跟正常三维空间透视变换前的三角形的线性插值相提并论呢？
-
-### 2D空间下的透视矫正插值
-
-这里引用一张虎书的插图，来直观地理解为什么屏幕空间的线性插值不正确：
-
-![PerspectiveCorrectFigure](E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\PerspectiveCorrectFigure.png)
-
-这两张图都是4x4的正方形平面，被分割成了平均的16块。
-
-左边那张图显然符合我们的生活常识，即使这些方格实际上都是一样大的，但是因为近大远小的关系看起来应该是左边这样扭曲过的，而右边的是直接用屏幕空间的线性插值顶点位置出来的结果。这显然不对，因为他把正方形经过透视投影变换而成的梯形当作原始图形来线性插值了，而我们想要的结果是透视投影前先做线性插值，再做透视投影变换。
-
-这显然是做不到的，因为我们线性插值前需要先找到屏幕空间应该被光栅化的像素，怎么可能先线性插值再变换到屏幕空间呢？
-
-所以我们需要从屏幕空间的像素坐标反推出它在透视投影变换前位于相机空间的哪个点，找出一个映射关系。
-
-大家可以借鉴一下这篇文章的推导过程：
-
-[图形学 - 关于透视矫正插值那些事](https://zhuanlan.zhihu.com/p/403259571)
-
-我这里直接给出他的结果
-$$
-n=\frac{mZ_1}{(1-m)Z_2+mZ_1}
-$$
-m是屏幕空间下我们想要光栅化的像素的插值权重，n是这个像素对应到相机空间中的点的实际插值权重，Z1和Z2分别是我们要插值的两个坐标在相机空间下的深度值。
-
-其中我们知道相机空间下的深度值在透视投影后变成了齐次裁剪空间中坐标的w值，所以我们可以只传递裁剪空间下的w值来计算。
-
-```c++
-	inline Vertex perspectiveLerp(const Vertex& v1, const Vertex& v2, const float t,
-		const myEigen::Vector4f& v1c, const myEigen::Vector4f& v2c)
-	{
-		float correctLerp = t * v2c.w / ((1 - t) * v1c.w + t * v2c.w);
-		return lerp(v1, v2, correctLerp);
-	}
-```
-
-完整的透视校正下的EdgeWalking的代码如下：
-
-```c++
-	void rasterizer::rasterize_edge_walking(const Triangle& m, const std::array<myEigen::Vector4f, 3>& clipSpacePos)
-	{
-		Triangle t = m;
-		auto csp = clipSpacePos;
-		if (t.vertex[0].vertex.y > t.vertex[1].vertex.y)
-			std::swap(t.vertex[0], t.vertex[1]); std::swap(csp[0], csp[1]);
-		if (t.vertex[0].vertex.y > t.vertex[2].vertex.y)
-			std::swap(t.vertex[0], t.vertex[2]); std::swap(csp[0], csp[2]);
-		if (t.vertex[1].vertex.y > t.vertex[2].vertex.y)
-			std::swap(t.vertex[1], t.vertex[2]); std::swap(csp[1], csp[2]);
-		float longEdge = t.vertex[2].vertex.y - t.vertex[0].vertex.y;
-		if (longEdge == 0) { return; }
-		//scan the bottom triangle
-		for (int y = std::ceil(t.vertex[0].vertex.y - 0.5f); y < std::ceil(t.vertex[1].vertex.y - 0.5f); y++)
-		{
-			float shortEdge = t.vertex[1].vertex.y - t.vertex[0].vertex.y;
-
-			float shortLerp = ((float)y + 0.5f - t.vertex[0].vertex.y) / shortEdge;
-			float longLerp = ((float)y + 0.5f - t.vertex[0].vertex.y) / longEdge;
-			
-			Vertex shortVertex = lerp(t.vertex[0], t.vertex[1], shortLerp);
-			Vertex longVertex = lerp(t.vertex[0], t.vertex[2], longLerp);
-			Vertex shortVertexC = perspectiveLerp(t.vertex[0], t.vertex[1], shortLerp, csp[0], csp[1]);
-			Vertex longVertexC = perspectiveLerp(t.vertex[0], t.vertex[2],longLerp, csp[0], csp[2]);
-
-			if (shortVertex.vertex.x > longVertex.vertex.x)
-				std::swap(shortVertex, longVertex);
-			for (int i = std::ceil(shortVertex.vertex.x - 0.5f); i < std::ceil(longVertex.vertex.x - 0.5f); i++)
-			{
-				float lerpNumber = ((float)i + 0.5f - shortVertex.vertex.x) / (longVertex.vertex.x - shortVertex.vertex.x);
-				Vertex pixel = perspectiveLerp(shortVertex, longVertex, lerpNumber, shortVertexC.vertex, longVertexC.vertex);
-				image.set(i, y, pixel.vertexColor);
-			}
-		}
-		//scan the top triangle
-		for (int y = std::ceil(t.vertex[1].vertex.y - 0.5f); y < std::ceil(t.vertex[2].vertex.y - 0.5f); y++)
-		{
-			float shortEdge = t.vertex[2].vertex.y - t.vertex[1].vertex.y;
-
-			float shortLerp = ((float)y + 0.5f - t.vertex[1].vertex.y) / shortEdge;
-			float longLerp = ((float)y + 0.5f - t.vertex[0].vertex.y) / longEdge;
-			
-			Vertex shortVertex = lerp(t.vertex[1], t.vertex[2], shortLerp);
-			Vertex longVertex = lerp(t.vertex[0], t.vertex[2], longLerp);
-			Vertex shortVertexC = perspectiveLerp(t.vertex[1], t.vertex[2], shortLerp, csp[1], csp[2]);
-			Vertex longVertexC = perspectiveLerp(t.vertex[0], t.vertex[2], longLerp, csp[0], csp[2]);
-			
-			if (shortVertex.vertex.x > longVertex.vertex.x)
-				std::swap(shortVertex, longVertex);
-			for (int i = std::ceil(shortVertex.vertex.x - 0.5f); i < std::ceil(longVertex.vertex.x - 0.5f); i++)
-			{
-				float lerpNumber = ((float)i + 0.5f - shortVertex.vertex.x) / (longVertex.vertex.x - shortVertex.vertex.x);
-				Vertex pixel = perspectiveLerp(shortVertex, longVertex, lerpNumber, shortVertexC.vertex, longVertexC.vertex);
-				image.set(i, y, pixel.vertexColor);
-			}
-		}
-
-	}
-```
-
-我们输出一下结果：
-
-![output0透视校正_1](E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\output0透视校正_1.gif)
-
-怎么感觉废了半天劲没啥变化？
-
-<img src="E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\对吗.jpg" alt="对吗" style="zoom:25%;" />
-
-让我们在[GeoGebra计算器套件](https://www.geogebra.org/calculator)里看一下这个式子的函数图像
-$$
-n=\frac{mZ_1}{(1-m)Z_2+mZ_1}
-$$
-<img src="E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\函数图像.png" alt="函数图像" style="zoom: 80%;" />
-
-Z1与Z2的差值越大，这个函数就越“凸”，也就是矫正与否的差别越大，而我们的三角形一是因为初始z值都是-2，在旋转中也拉不开太大距离。二是因为透视矫正在矫正顶点颜色插值的时候也不是很明显。所以我们的图像看起来与之前相差无几。可以使用photoshop叠图试试，或者加一行
-
-```c++
-if (fabs(correctLN - 0.5) < 0.05)pixel.vertexColor = TGAColor(255, 255, 255, 0);
-```
-
-把三角形的分割线中点与顶点的线段给画出来，再打开ps叠图，可以看到确实矫正后的中点判断比屏幕空间直接插值的结果有一个偏移量。
-
-<img src="E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\对的.jpg" alt="对的" style="zoom:50%;" />
-
-我的debug模式下渲染71帧时间差不多5.8秒左右，看起来这个算法确实不错，我们现在已经可以像这个表情包里一样说"I know opengl"了。
-
-<img src="E:\NOTE\软件光栅器之旅\04.杂项裁剪、光栅化、测试与抗锯齿\opengl.jpg" alt="opengl" style="zoom:50%;" />
-
-### Edge Equation
-
-我们这里还要介绍一种更广泛运用在GPU硬件上的算法。也就是Edge Equation。GAMES101作业框架中用的也是这种方法。
-
-Edge Walking虽然也很好用，但他其实在GPU时代已经被淘汰了，虽然我们的软光栅确实还有Edge Walking的一席之地，但不要忘了我们做软光栅不是为了做软光栅，而是为了更深刻地理解一些渲染基础知识。那么我们一定需要了解Edge Equation，或者说，一定需要了解三角形的重心坐标插值。
-
-Edge Equation判断点是否在三角形内的方法比较简单粗暴，直接计算出三角形三条边的方程，即Ax+By+C=0，然后把点的坐标直接代进去，因为直线会把屏幕分割成两个部分， 我们将代入出来的结果跟0比较，就可以知道点在哪个部分了。
-
-然后我们把点的坐标代入三条直线方程，得出来的结果都大于0或者都小于0即代表点是否在三角形的内部。
-
-GAMES101中闫令琪老师给了一个向量叉乘的算法，其实跟Edge Equation是等价的，算是换了一种方式理解直线方程。
-
-当然我们需要做一个包围盒把三角形包起来，再遍历包围盒里的点，不然一个可能只占十几个像素的三角形我们都要遍历屏幕的每个像素的话就太扯淡了：
-
-```c++
-	void rasterizer::rasterize_edge_equation(const Triangle& m, const std::array<myEigen::Vector4f, 3>& clipSpacePos)
+	void rasterizer::rasterize_edge_equation(const Triangle& m, IShader& shader, const std::array<myEigen::Vector4f, 3>& clipSpacePos)
 	{
 		int boundingTop = std::ceil(std::max({ m.vertex[0].vertex.y, m.vertex[1].vertex.y, m.vertex[2].vertex.y }));
 		int boundingBottom = std::floor(std::min({ m.vertex[0].vertex.y, m.vertex[1].vertex.y, m.vertex[2].vertex.y }));
 		int boundingRight = std::ceil(std::max({ m.vertex[0].vertex.x, m.vertex[1].vertex.x, m.vertex[2].vertex.x }));
 		int boundingLeft = std::floor(std::min({ m.vertex[0].vertex.x, m.vertex[1].vertex.x, m.vertex[2].vertex.x }));
 
-		for (int y = boundingBottom; y < boundingTop; y++)
+		for (int y = boundingBottom; y < boundingTop; y += 2)
 		{
-			for (int x = boundingLeft; x < boundingRight; x++) 
+			for (int x = boundingLeft; x < boundingRight; x += 2) 
 			{
-				if (insideTriangle(m, (float)x + 0.5, (float)y + 0.5)) 
+				Vertex pixel[2][2];
+				for (int a : {x, x + 1})
 				{
+					for (int b : {y, y + 1})
+					{
+						if (insideTriangle(m, (float)a + 0.5, (float)b + 0.5))
+						{
+							pixel[a - x][b - y] =
+								barycentricPerspectiveLerp(m, myEigen::Vector2f(a + 0.5, b + 0.5), clipSpacePos);
+						}
+					}
+				}
 
+				float ddx = -1;
+				float ddy = -1;
+
+				for (int i : {0, 1})
+				{
+					if (!pixel[i][0].empty() && !pixel[i][1].empty())
+					{
+						ddx = std::max(fabs((pixel[i][1].texcoord - pixel[i][0].texcoord).Length()), ddx);
+					}
+					if (!pixel[0][i].empty() && !pixel[1][i].empty())
+					{
+						ddy = std::max(fabs((pixel[0][i].texcoord - pixel[1][i].texcoord).Length()), ddy);
+					}
+				}
+
+				shader.setddx(ddx);
+				shader.setddy(ddy);
+
+				for (int a : {0, 1})
+				{
+					for (int b : {0, 1})
+					{
+						if (pixel[a][b].empty()) continue;
+						pixel[a][b].vertexColor = shader.FragmentShader(pixel[a][b]);
+						if (pixel[a][b].vertex.z > z_buffer[get_index(x + a, y + b)])
+						{
+							image.set(x + a, y + b, pixel[a][b].vertexColor);
+							z_buffer[get_index(x + a, y + b)] = pixel[a][b].vertex.z;
+						}
+					}
 				}
 			}
 		}
 	}
-
-	static bool insideTriangle(const Triangle& m, const float x, const float y)
-	{
-		myEigen::Vector4f v1 = m.vertex[0].vertex;
-		myEigen::Vector4f v2 = m.vertex[1].vertex;
-		myEigen::Vector4f v3 = m.vertex[2].vertex;
-
-		float side1 = (v2.y - v1.y) * x + (v1.x - v2.x) * y + v2.x * v1.y - v1.x * v2.y;
-		float side2 = (v3.y - v2.y) * x + (v2.x - v3.x) * y + v3.x * v2.y - v2.x * v3.y;
-		float side3 = (v1.y - v3.y) * x + (v3.x - v1.x) * y + v1.x * v3.y - v3.x * v1.y;
-
-		return (side1 >= 0 && side2 >= 0 && side3 >= 0) || (side1 <= 0 && side2 <= 0 && side3 <= 0);
-	}
 ```
 
-这时我们就需要注意到三角形的边缘绘制问题了，如果一个三角形的边缘刚好经过了像素的中心，那这个像素算在三角形里吗？
+我们使用-1的ddx和ddy值用来表示ddx和ddy不存在的情况，也就是四个像素有几个是空像素的情况，这时候我们直接使用长宽最大的mipmap即可。
 
-闫令琪老师说不用特殊处理，对，但是也不对。
-
-我们现在接触的目前还只是不透明物的渲染，如果涉及到半透明物体的渲染的时候。如果一对相邻三角形的临边穿过了像素中心点，我们如果对两个三角形都认为这个像素算在三角形里的话，会导致两个三角形在这个顶点的颜色叠加在一起，也就是overdraw了，图像渲染得不正确。
-
-而如果我们认为这样的像素不在三角形里的话，很明显连不透明物体的渲染都会出问题，两条三角形的临边会看起来挖了洞一样。
-
-所以不能摆烂不作处理，我们需要规定一个规则来规范边缘像素的所有权。
-
-### Top-Left Rules
-
-[MSDN Top-Left Rules](https://learn.microsoft.com/zh-cn/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules?redirectedfrom=MSDN#triangle-rasterization-rules-without-multisampling)
-
-这个规则是directx3D的处理规则，我们可以参考他们的规则来做。
-
-![](https://learn.microsoft.com/zh-cn/windows/win32/direct3d11/images/d3d10-rasterrulestriangle.png)
-
-对于一条边跨过像素中心的情况，我们规定，如果这条边不是水平的，那么如果这条边是三角形“左边”的边，那么就属于三角形内。
-
-如果这条边水平，那么如果这条边是三角形“上边”的边，那么就属于三角形内。
-
-如何判断这条边是在topleft还是在bottomright呢？根据三角形的绕序来决定。
-
-如果三角形绕序是逆时针的，那么可想而知，假设这条边的两个顶点分别为v1和v2，如果v1的y值大于v2的y值就说明这条边是三角形的“左”边，如果y值相同，那么v1的x值大于v2的x值就说明这条边是三角形的“上”边。
-
-在实际代码中，我们的rules函数可以直接返回一个bias来影响判断：
+然后是采样mipmap的过程：
 
 ```c++
-	static int TopLeftRules(const float side, const myEigen::Vector4f& v1, const myEigen::Vector4f& v2,
-		const rst::TriangleVertexOrder& Order)
-	{
-		if (Order == TriangleVertexOrder::counterclockwise) {
-			if (fabs(side) < 1e-6) {
-				return ((v1.y > v2.y) || (v1.y == v2.y && v1.x > v2.x)) ? 0 : -1;
-			} else { return 0; }
-		}
-		else
+		myEigen::Vector3f sample(const myEigen::Vector2f texcoord, const std::vector<TGAImage>& texture)
 		{
-			if (fabs(side) < 1e-6) {
-				return ((v1.y < v2.y) || (v1.y == v2.y && v1.x < v2.x)) ? 0 : -1;
-			}
-			else { return 0; }
-		}
-	}
-
-	bool rasterizer::insideTriangle(const Triangle& m, const float x, const float y)
-	{
-		myEigen::Vector4f v1 = m.vertex[0].vertex;
-		myEigen::Vector4f v2 = m.vertex[1].vertex;
-		myEigen::Vector4f v3 = m.vertex[2].vertex;
-
-		float side1 = (v2.y - v1.y) * x + (v1.x - v2.x) * y + v2.x * v1.y - v1.x * v2.y;
-		float side2 = (v3.y - v2.y) * x + (v2.x - v3.x) * y + v3.x * v2.y - v2.x * v3.y;
-		float side3 = (v1.y - v3.y) * x + (v3.x - v1.x) * y + v1.x * v3.y - v3.x * v1.y;
-
-		side1 += TopLeftRules(side1, v1, v2, vertexOrder);
-		side2 += TopLeftRules(side2, v2, v3, vertexOrder);
-		side3 += TopLeftRules(side3, v3, v1, vertexOrder);
-
-		return (side1 >= 0 && side2 >= 0 && side3 >= 0) || (side1 <= 0 && side2 <= 0 && side3 <= 0);
-	}
-```
-
-### 三角形重心坐标系插值
-
-判断完毕了那些像素点需要被光栅化后，我们下一步就是插值出每个像素点的属性值，不同于edge walking两次线性插值的是，edge equation中使用三角形重心坐标来插值。
-
-数学上定义了三角形重心坐标系，我们来回顾一下相关知识。
-
-这里借用虎书的插图
-
-<img src="./重心坐标系.png" alt="重心坐标系" style="zoom: 80%;" />
-
-想象这么一个坐标系，基向量为c-a和b-a，原点为a，那么点p可以这么表示：
-$$
-p=a+β(b-a)+γ(c-a)
-$$
-
-
-我们把括号里的项拆出来
-$$
-p=(1-β-γ)a+βb+γc
-$$
-令α=1-β-γ，
-
-那么我们定义一个三角形内的任何一个点p都可以用一个关于顶点A、B、C的线性组合来表示
-$$
-p=αa+βb+γc
-$$
-其中α、β和γ都在(0, 1)范围内时才满足在三角形内的条件。
-
-至于β和γ满足以下线性变换方程：
-$$
-\begin{bmatrix}x_b-x_a\quad x_c-x_a\\
-y_b-y_a\quad y_c-y_a\end{bmatrix}
-\begin{bmatrix}β\\γ\end{bmatrix}=
-\begin{bmatrix}x_p-x_a\\y_p-y_a\end{bmatrix}
-$$
-如果我们定义了二维矩阵就可以傻瓜式写出代码了，但是我们数学库里没定义这玩意儿。。。
-
-所以直接求出结果代入吧：
-$$
-γ=\frac{(y_a-y_b)x+(x_b-x_a)y+x_ay_b-x_by_a}{(y_a-y_b)x_c+(x_b-x_a)y_c+x_ay_b-x_by_a}\\
-β=\frac{(y_a-y_c)x+(x_c-x_a)y+x_ay_c-x_cy_a}{(y_a-y_c)x_b+(x_c-x_a)y_b+x_ay_c-x_cy_a}\\
-α=1-β-γ
-$$
-我们直接转换成代码：
-
-```c++
-"rasterizer.cpp"
-	void rasterizer::rasterize_edge_equation(const Triangle& m, const std::array<myEigen::Vector4f, 3>& clipSpacePos)
-	{
-		int boundingTop = std::ceil(std::max({ m.vertex[0].vertex.y, m.vertex[1].vertex.y, m.vertex[2].vertex.y }));
-		int boundingBottom = std::floor(std::min({ m.vertex[0].vertex.y, m.vertex[1].vertex.y, m.vertex[2].vertex.y }));
-		int boundingRight = std::ceil(std::max({ m.vertex[0].vertex.x, m.vertex[1].vertex.x, m.vertex[2].vertex.x }));
-		int boundingLeft = std::floor(std::min({ m.vertex[0].vertex.x, m.vertex[1].vertex.x, m.vertex[2].vertex.x }));
-
-		for (int y = boundingBottom; y < boundingTop; y++)
-		{
-			for (int x = boundingLeft; x < boundingRight; x++) 
+			if (!texture.empty())
 			{
-				if (insideTriangle(m, (float)x + 0.5, (float)y + 0.5)) 
+				int mipmap_level = 0;
+				if (ddx != -1.0f || ddy != -1.0f)
 				{
-					Vertex pixel = barycentricLerp(m, myEigen::Vector2f(x + 0.5, y + 0.5));
-					image.set(x, y, pixel.vertexColor);
+					int i = 0;
+					for (auto& map : texture)
+					{
+						float d = std::max(ddx * map.width(), ddy * map.height());
+						if (std::max((int)std::log2(d), 0) == 0)
+						{
+							mipmap_level = i;
+							break;
+						}
+						i++;
+					}
 				}
+
+				TGAColor var = bilinearInterpolate(texture[mipmap_level],
+					texcoord.x * texture[mipmap_level].width(),
+					texcoord.y * texture[mipmap_level].height());
+				return myEigen::Vector3f(var.bgra[2] / 255.0, var.bgra[1] / 255.0, var.bgra[0] / 255.0);
 			}
+			else { return myEigen::Vector3f(-200, -200, -200); }
 		}
-	}
-
-"geometry.cpp":
-	Vertex barycentricLerp(const Triangle& t, const myEigen::Vector2f& pixel)
-	{
-		Vertex v1 = t.vertex[0]; Vertex v2 = t.vertex[1]; Vertex v3 = t.vertex[2];
-		float xa = v1.vertex.x; float ya = v1.vertex.y;
-		float xb = v2.vertex.x; float yb = v2.vertex.y;
-		float xc = v3.vertex.x; float yc = v3.vertex.y;
-		float x = pixel.x; float y = pixel.y;
-
-		float gamma = ((ya - yb) * x + (xb - xa) * y + xa * yb - xb * ya) /
-			((ya - yb) * xc + (xb - xa) * yc + xa * yb - xb * ya);
-		float beta = ((ya - yc) * x + (xc - xa) * y + xa * yc - xc * ya) /
-			((ya - yc) * xb + (xc - xa) * yb + xa * yc - xc * ya);
-		float alpha = 1 - beta - gamma;
-
-		return v1 * alpha + v2 * beta + v3 * gamma;
-	}
-
 ```
 
-这样还差最后一步，就是透视矫正。
+这样我们的mipmap基本完成了，让我们来看看结果：
 
-### 重心坐标下的透视矫正插值
+![MipMap](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450833.gif)
 
-我们之前讨论的是2D空间下的透视矫正，用于处理EdgeWalking中两次线性插值的情况算是刚好合适，但是现在我们处理的是重心坐标插值，那么我们该怎么计算重心坐标在透视投影前后的alpha，beta与gamma之间的关系呢？
+区别不是很大，主要是衣服上的渲染有点差别，原本的法线贴图在衣服上有一定的摩尔纹现象，不过需要改成白模渲染才容易看出来。
 
-我们再来深入浅出一下透视投影发生了什么：
-$$
-M_p\begin{bmatrix}x\\y\\z\\1\end{bmatrix}=
-\begin{bmatrix}nx\\ny\\(n+f)z-fn\\z\end{bmatrix}=>
-\begin{bmatrix}\frac{nx}{z}\\\frac{ny}{z}\\n+f-\frac{fn}{z}\\1\end{bmatrix}
-$$
-简化一下公式
-$$
-M_p\begin{bmatrix}x\\y\\z\\1\end{bmatrix}=
-\begin{bmatrix}wx^{'}\\wy^{'}\\wz^{'}\\w\end{bmatrix}=
-w\begin{bmatrix}x^{'}\\y^{'}\\z^{'}\\1\end{bmatrix}
-$$
-现在我们假设一个点P(x, y, z)和一个三角形，顶点为ABC，则满足重心坐标方程：
-$$
-\begin{bmatrix}P\\1\end{bmatrix}=
-α\begin{bmatrix}A\\1\end{bmatrix} + β\begin{bmatrix}B\\1\end{bmatrix} + γ\begin{bmatrix}C\\1\end{bmatrix}
-$$
-方程两边左乘透视矩阵：
-$$
-M_p\begin{bmatrix}P\\1\end{bmatrix}=
-αM_p\begin{bmatrix}A\\1\end{bmatrix} + βM_p\begin{bmatrix}B\\1\end{bmatrix} + γM_p\begin{bmatrix}C\\1\end{bmatrix}\\
-w_p\begin{bmatrix}P^{'}\\1\end{bmatrix}=
-αw_a\begin{bmatrix}A^{'}\\1\end{bmatrix} + βw_b\begin{bmatrix}B^{'}\\1\end{bmatrix} + γw_c\begin{bmatrix}C^{'}\\1\end{bmatrix}
-$$
-我们将这些向量从第三行“切”开，变成两个方程：
-$$
-w_pP^{'}=
-αw_aA^{'} + βw_bB^{'} + γw_cC^{'}\\
-w_p=
-αw_a + βw_b + γw_c\\
-$$
-直接把下面那个式子代入上边：
-$$
-P^{'}=
-\frac{αw_aA^{'} + βw_bB^{'} + γw_cC^{'}}{αw_a + βw_b + γw_c}\\
-=\frac{αw_a}{αw_a + βw_b + γw_c}A^{'}+\frac{βw_a}{αw_a + βw_b + γw_c}B^{'}+\frac{γw_a}{αw_a + βw_b + γw_c}C^{'}
-$$
-这样我们透视后的alpha、beta和gamma值与透视前的alpha、beta和gamma的关系就出来了
-$$
-W=\frac{1}{\frac{α^{'}}{w_a}+\frac{β^{'}}{w_b}+\frac{γ^{'}}{w_c}}\\
-α=\frac{\frac{α^{'}}{w_a}}{W}\\
-β=\frac{\frac{β^{'}}{w_b}}{W}\\
-γ=\frac{\frac{γ^{'}}{w_c}}{W}\\
-$$
-直接开写：
+#### 三线性插值(Trilinear interpolation)
+
+如果跟着写了之前的代码就会发现一个问题，我们判断mipmaplevel的方式是离散的，也就是不平滑的，假设我们计算出来的mipmaplevel是3.4，那么我们直接使用mipmaplevel为3的纹理进行采样，可实际上我们完全可以这么操作，在mipmaplevel为3和4的纹理上都进行一次采样，然后根据这个level的小数部分也就是0.4为插值权重对两次结果进行一次插值。
+
+因为我们在纹理上采样的过程是双线性插值，我们实际上是进行了两次双线性插值，再将最终结果进行一次插值，所以这个过程被我们称作三线性插值。
+
+我们来简单写一下，稍微改写下之前的函数：
 
 ```c++
-	Vertex barycentricPerspectiveLerp(const Triangle& t, const myEigen::Vector2f& pixel
-		, const std::array<myEigen::Vector4f, 3>& v)
-	{
-		Vertex v1 = t.vertex[0]; Vertex v2 = t.vertex[1]; Vertex v3 = t.vertex[2];
-		float xa = v1.vertex.x; float ya = v1.vertex.y;
-		float xb = v2.vertex.x; float yb = v2.vertex.y;
-		float xc = v3.vertex.x; float yc = v3.vertex.y;
-		float x = pixel.x; float y = pixel.y;
+		myEigen::Vector3f sample(const myEigen::Vector2f texcoord, const std::vector<TGAImage>& texture)
+		{
+			if (!texture.empty())
+			{
+				float mipmap_level = 0;
+				if (ddx != -1.0f || ddy != -1.0f)
+				{
+                    float max_level = texture.size() - 1;
+                    float d = std::max(ddx * texture[0].width(), ddy * texture[0].height());
+                    mipmap_level = std::log2(d);
+                    if (mipmap_level < 0)
+                    {
+                        mipmap_level = 0;
+                        TGAColor var = bilinearInterpolate(texture[mipmap_level],
+                            texcoord.x * texture[mipmap_level].width(),
+                            texcoord.y * texture[mipmap_level].height());
+                        return myEigen::Vector3f(var.bgra[2] / 255.0, var.bgra[1] / 255.0, var.bgra[0] / 255.0);
+                    }
+                    if (mipmap_level > max_level)
+                    {
+                        mipmap_level = max_level;
+                        TGAColor var = bilinearInterpolate(texture[mipmap_level],
+                            texcoord.x * texture[mipmap_level].width(),
+                            texcoord.y * texture[mipmap_level].height());
+                        return myEigen::Vector3f(var.bgra[2] / 255.0, var.bgra[1] / 255.0, var.bgra[0] / 255.0);
+                    }                  
+				}
 
-		float g = ((ya - yb) * x + (xb - xa) * y + xa * yb - xb * ya) /
-			((ya - yb) * xc + (xb - xa) * yc + xa * yb - xb * ya);
-		float b = ((ya - yc) * x + (xc - xa) * y + xa * yc - xc * ya) /
-			((ya - yc) * xb + (xc - xa) * yb + xa * yc - xc * ya);
-		float a = 1 - b - g;
+                int f_mipmap_level = floor(mipmap_level);
+                int c_mipmap_level = ceil(mipmap_level);
 
-		float W = 1.0f / (a / v[0].w + b / v[1].w + g / v[2].w);
-		float beta = (b / v[1].w) * W;
-		float gamma = (g / v[2].w)* W;
-		float alpha = 1.0f - beta - gamma;
-		
-		return v1 * alpha + v2 * beta + v3 * gamma;
-	}
+				TGAColor f_var = bilinearInterpolate(texture[f_mipmap_level],
+					texcoord.x * texture[f_mipmap_level].width(),
+					texcoord.y * texture[f_mipmap_level].height());
+                TGAColor c_var = bilinearInterpolate(texture[c_mipmap_level],
+                    texcoord.x * texture[c_mipmap_level].width(),
+                    texcoord.y * texture[c_mipmap_level].height());
+                TGAColor var = ColorLerp(f_var, c_var, mipmap_level - f_mipmap_level);
+				return myEigen::Vector3f(var.bgra[2] / 255.0, var.bgra[1] / 255.0, var.bgra[0] / 255.0);
+			}
+			else { return myEigen::Vector3f(-200, -200, -200); }
+		}
 ```
 
-输出结果：
+基本上就差不多了，注意两个边界情况不需要使用三线性插值，让我们看下结果：
 
-![EdgeEquation](./EdgeEquation.gif)
+![三线性插值](https://raw.githubusercontent.com/chiuhoukazusa/blog_img/main/202301180450962.gif)
 
-一模一样，但是同样是72帧花了8秒往上，显然对于单线程CPU来说这个算法更慢，而对于高度并行的GPU来说，这种逻辑简单，计算归结到每个像素内的算法显然比先给三角形一分为二，再用扫描线移动的EdgeWalking更加合适。
-
-## 深度测试
-
-目前为止我们只是对于一个三角形进行操作，一旦有多个三角形，我们就不得不思考一下遮挡关系的问题了。
-
-一般来说深度测试在着色阶段的后面，可能会有点奇怪，如果先深度测试再着色不就能避免很多overdraw的问题了吗？
-
-能避免，但也会带来其他问题。渲染效率上提升幅度确实很大，但是涉及到透明物体渲染，或者着色阶段的fragment shader编写中更改了深度信息，那么我们先进行深度测试就会导致渲染出错误的图像。
-
-但是确实先做深度测试能带来渲染效率上的大提升，所以GPU硬件中已经集成了early-z的算法，可选择开启与否。
-
-### 画家算法与其局限性
-
-画家算法就像他的名字一样好理解，怎么画出三角形的遮挡关系？答：从远及近给三角形排个序，先画远的再画近的。
-
-看似粗暴，但是真的有用。但是对于一些复杂遮挡关系就没辙，比如下图：
-
-![复杂遮挡关系](./复杂遮挡关系.png)
-
-你说这种怎么给三角形排个先后画的顺序呢？
-
-而且传统的算法中对于三角形的前后排序涉及到空间分割的数据结构，一般是使用BSP树对三角形排序，对于三角形相互穿过的情况进行裁剪，但如果场景很大，或者物体动的很快的情形就不适用，即使是BSP树也会显得很慢，在如今我们无论是软光栅还是硬光栅，普遍使用的方法就是Z-Buffer。
-
-### Z-Buffer
-
-Z-Buffer说起来非常简单，创建一个Buffer来存储每个像素的深度值，当某个像素被覆盖时，将会与Z-Buffer里存储的当前像素已有深度值进行测试，如果离摄像机更近则覆盖上去，更远就什么也不做。
-
-我们直接写一下代码，其实可以直接参考下tgaimage里data这个类似帧缓冲的实现：
-
-```c++
-	rasterizer::rasterizer(const std::string& f, const TGAImage& img)
-		:filename(f), image(img), width(img.width()), height(img.height()),
-		zneardis(0.1f), zfardis(50), fovY(45), aspect(1)
-	{
-		...
-		z_buffer.resize(img.width() * img.height());
-		std::fill(z_buffer.begin(), z_buffer.end(), -std::numeric_limits<float>::infinity());
-	}
-
-	int rasterizer::get_index(int x, int y)
-	{
-		return y * width + x;
-	}
-
-	void rasterizer::rasterize_edge_equation(const Triangle& m, const std::array<myEigen::Vector4f, 3>& clipSpacePos)
-    {
-        ...
-            Vertex pixel = barycentricPerspectiveLerp(m, myEigen::Vector2f(x + 0.5, y + 0.5), clipSpacePos);
-            if (pixel.vertex.z > z_buffer[get_index(x, y)]) 
-            {
-                image.set(x, y, pixel.vertexColor);
-                z_buffer[get_index(x, y)] = pixel.vertex.z;
-            }
-    }
-```
-
-EdgeEquation中的实现就是这样，EdgeWalking中的实现其实也一模一样，根本没几行代码的事。
-
-看看结果（EdgeWalking）：
-
-![深度测试](./深度测试.gif)
-
-我传入的三角形是games101作业2中的三角形数据，传入顺序是先传前面的三角形，再传后面的三角形，但是结果依然给出了正确的遮挡关系，说明深度测试正确起效果了。
+在缩略图情况下看不出差别是正常的，我用photoshop放大看才能看出些许平滑感，实际上三线性插值在这里就是不明显，日后也许有渲染大型场景的机会，这时三线性插值甚至mipmap本身的影响都会比较明显。
 
 ## 结语
 
-这一节很多内容比我想象的难一点，稍微做的晚了一些，而且依然有点缺憾，我后面也许会再出几篇文章补充一下。
+基本上渲染出这张gif的时候我们的任务就基本完成了，下一节应该轮到阴影的渲染了，这又是一个大问题。
 
-首先是齐次坐标裁剪，我们并没有实现完整的齐次坐标裁剪，而是将其一部分工作转移到了屏幕空间进行，Cohen-Sutherland算法应该是完全可以拓展到3维或者4维的，这一点我写的时候没有考虑清楚，后续会再出一篇文章详细讲讲齐次坐标裁剪。
-
-然后是深度测试的精度问题，我们忽略掉了很多事情，真正的Zbuffer储存在GPU上不同位数会有迥异的表现，而且我们处理的深度值没有做过任何变换，直接传入了原始的NDC坐标，会触及到一些浮点数精度之类的问题，也许这个也可能会再出篇文章讲讲深度测试的精度。
-## version 0.3.0
-
-当然还是先出下一节为主，下一节不出意外的话应该是做纹理映射，我们会提前引入一个读取obj文件的头文件，届时应该可以看看我们渲染器的表现如何了。
+话说前面的一些文章有一些错误，我已经尽可能修改重新上传过了，但是文章一直没什么人看，我想可能跟我的文章的形式有关系，我的文章太长太综合了，等我结束这个系列后我会尽量就几个重点问题再写几篇文章，比如mipmap到三线性插值再到我们这里没有实现的各向异性过滤我会专门再开一篇文章讲一下，包括法线贴图原理我也觉得再开个专门文章讲一下比较好，反正今天之后更新频率会尽可能上去，最近忙的事情基本上告一段落了，除非我一整个寒假都在打火纹，不然文章的更新应该会有所保证。
