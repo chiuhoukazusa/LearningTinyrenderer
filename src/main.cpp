@@ -8,7 +8,6 @@
 #include <string>
 #include <chrono>
 #include <random>
-
 using std::cout;
 using std::cin;
 using std::endl;
@@ -52,27 +51,42 @@ namespace rst
 		{
 			if (!texture.empty())
 			{
-				int mipmap_level = 0;
+				float mipmap_level = 0;
 				if (ddx != -1.0f || ddy != -1.0f)
 				{
-					int i = 0;
-					for (auto& map : texture)
-					{
-						float d = std::max(ddx * map.width(), ddy * map.height());
-						if (std::max((int)std::log2(d), 0) == 0)
-						{
-							mipmap_level = i;
-							break;
-						}
-						i++;
-					}
+                    float max_level = texture.size() - 1;
+                    float d = std::max(ddx * texture[0].width(), ddy * texture[0].height());
+                    mipmap_level = std::log2(d);
+                    if (mipmap_level < 0)
+                    {
+                        mipmap_level = 0;
+                        TGAColor var = bilinearInterpolate(texture[mipmap_level],
+                            texcoord.x * texture[mipmap_level].width(),
+                            texcoord.y * texture[mipmap_level].height());
+                        return myEigen::Vector3f(var.bgra[2] / 255.0, var.bgra[1] / 255.0, var.bgra[0] / 255.0);
+                    }
+                    if (mipmap_level > max_level)
+                    {
+                        mipmap_level = max_level;
+                        TGAColor var = bilinearInterpolate(texture[mipmap_level],
+                            texcoord.x * texture[mipmap_level].width(),
+                            texcoord.y * texture[mipmap_level].height());
+                        return myEigen::Vector3f(var.bgra[2] / 255.0, var.bgra[1] / 255.0, var.bgra[0] / 255.0);
+                    }                  
 				}
 
-                //if (mipmap_level == 10) __debugbreak();
+                int f_mipmap_level = floor(mipmap_level);
+                int c_mipmap_level = ceil(mipmap_level);
 
-				TGAColor var = bilinearInterpolate(texture[mipmap_level],
-					texcoord.x * texture[mipmap_level].width(),
-					texcoord.y * texture[mipmap_level].height());
+                if (f_mipmap_level < 0) __debugbreak();
+
+				TGAColor f_var = bilinearInterpolate(texture[f_mipmap_level],
+					texcoord.x * texture[f_mipmap_level].width(),
+					texcoord.y * texture[f_mipmap_level].height());
+                TGAColor c_var = bilinearInterpolate(texture[c_mipmap_level],
+                    texcoord.x * texture[c_mipmap_level].width(),
+                    texcoord.y * texture[c_mipmap_level].height());
+                TGAColor var = ColorLerp(f_var, c_var, mipmap_level - f_mipmap_level);
 				return myEigen::Vector3f(var.bgra[2] / 255.0, var.bgra[1] / 255.0, var.bgra[0] / 255.0);
 			}
 			else { return myEigen::Vector3f(-200, -200, -200); }
@@ -167,32 +181,12 @@ namespace rst
             //Bump
             if (!material->map_Bump.empty())
             {
-                int mipmap_level = 0;
-                if (ddx != -1.0f || ddy != -1.0f)
-                {
-                    int i = 0;
-                    for (auto& map : material->map_Bump)
-                    {
-                        float d = std::max(ddx * map.width(), ddy * map.height());
-                        if (std::max((int)std::log2(d), 0) == 0)
-                        {
-                            mipmap_level = i;
-                            break;
-                        }
-                        i++;
-                    }
-                }
+                myEigen::Vector3f uv = sample(vertex.texcoord, material->map_Bump);
+           
 
-                float u = vertex.texcoord.x;
-                float v = vertex.texcoord.y;
-                float w = material->map_Bump[mipmap_level].width();
-                float h = material->map_Bump[mipmap_level].height();
-                TGAColor uv = bilinearInterpolate(material->map_Bump[mipmap_level],
-                    u * w, v * h);
-
-                myEigen::Vector3f uv_vec((double)uv.bgra[2] * 2.0f / 255.0 - 1.0f,
-                                         (double)uv.bgra[1] * 2.0f / 255.0 - 1.0f,
-                                         (double)uv.bgra[0] * 2.0f / 255.0 - 1.0f);
+                myEigen::Vector3f uv_vec((double)uv.x * 2.0f - 1.0f,
+                                         (double)uv.y * 2.0f - 1.0f,
+                                         (double)uv.z * 2.0f - 1.0f);
 
                 myEigen::Vector3f			n = uv_vec.Normalize();
 

@@ -64,6 +64,10 @@ namespace rst {
 			{
 				return true;
 			}
+			if (isnan(vertex.x) && isnan(vertex.y) && isnan(vertex.z) && isnan(vertex.w))
+			{
+				return true;
+			}
 			return false;
 		}
 	};
