@@ -13,6 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="头文件\shader">
+      <UniqueIdentifier>{e242e7e1-0d1c-4071-b70e-39147de0be94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\loadres">
+      <UniqueIdentifier>{0bf1572b-bf09-43b1-ae35-74a4f08b39d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\math">
+      <UniqueIdentifier>{66bc92f4-93c0-466e-898f-2921e2dc7b2e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\myEigen.cpp">
@@ -44,29 +53,38 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\tgaimage.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\myEigen.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="src\rasterizer.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\transform.h">
+    <ClInclude Include="src\config.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\geometry.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="src\shader\shadersrc\BlinnPhongShader.h">
+      <Filter>头文件\shader</Filter>
     </ClInclude>
-    <ClInclude Include="src\objLoader.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\material.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="src\shader\light\light.h">
+      <Filter>头文件\shader</Filter>
     </ClInclude>
     <ClInclude Include="src\shader.h">
-      <Filter>头文件</Filter>
+      <Filter>头文件\shader</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material.h">
+      <Filter>头文件\loadres</Filter>
+    </ClInclude>
+    <ClInclude Include="src\objLoader.h">
+      <Filter>头文件\loadres</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tgaimage.h">
+      <Filter>头文件\loadres</Filter>
+    </ClInclude>
+    <ClInclude Include="src\geometry.h">
+      <Filter>头文件\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\myEigen.hpp">
+      <Filter>头文件\math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\transform.h">
+      <Filter>头文件\math</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

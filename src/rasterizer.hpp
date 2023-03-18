@@ -6,6 +6,7 @@
 #include "shader.h"
 #include "material.h"
 #include "objLoader.h"
+#include "shader/light/light.h"
 #include <functional>
 
 namespace rst {

@@ -154,11 +154,14 @@
     <ClCompile Include="src\geometry.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\config.h" />
     <ClInclude Include="src\material.h" />
     <ClInclude Include="src\myEigen.hpp" />
     <ClInclude Include="src\objLoader.h" />
     <ClInclude Include="src\rasterizer.hpp" />
     <ClInclude Include="src\shader.h" />
+    <ClInclude Include="src\shader\light\light.h" />
+    <ClInclude Include="src\shader\shadersrc\BlinnPhongShader.h" />
     <ClInclude Include="src\tgaimage.h" />
     <ClInclude Include="src\transform.h" />
     <ClInclude Include="src\geometry.h" />
