@@ -10,6 +10,7 @@
 #include <random>
 #include <cassert>
 #include <stdexcept>
+#include <memory>
 
 using std::cout;
 using std::cin;
@@ -223,7 +224,7 @@ namespace rst
                 const myEigen::Vector3f uv = sample(vertex.texcoord, material->map_Bump);
            
                 // Convert from [0,1] to [-1,1]
-                const myEigen::Vector3f uv_vec(
+                myEigen::Vector3f uv_vec(
                     uv.x * 2.0f - 1.0f,
                     uv.y * 2.0f - 1.0f,
                     uv.z * 2.0f - 1.0f
@@ -334,8 +335,8 @@ int main(int argc, char** argv)
         std::vector<std::shared_ptr<rst::Mesh>> MeshList;
         
         // Load model
-        std::string root = "obj/Elden Ring - Melina_XPS/";
-        rst::Model model(root, "Melina.obj");
+        std::string root = "obj/diablo3_pose/";
+        rst::Model model(root, "diablo3_pose.obj");
         
         // Alternative models (commented out)
         // std::string root = "obj/diablo3_pose/";

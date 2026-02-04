@@ -1,6 +1,7 @@
 #pragma once
 #include "myEigen.hpp"
 #include "tgaimage.h"
+#include <array>
 
 namespace rst {
 	struct Vertex

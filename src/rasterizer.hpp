@@ -7,6 +7,7 @@
 #include "material.h"
 #include "objLoader.h"
 #include <functional>
+#include <memory>
 
 namespace rst {
 
@@ -44,8 +45,8 @@ namespace rst {
 				const std::array<myEigen::Vector4f, 3>& clipSpacePos);
 
 		private:
-			const TGAColor white = TGAColor(255, 255, 255, 255);//°×É«
-			const TGAColor red = TGAColor(255, 0, 0, 255);//ºìÉ«
+			const TGAColor white = TGAColor(255, 255, 255, 255);//ï¿½ï¿½É«
+			const TGAColor red = TGAColor(255, 0, 0, 255);//ï¿½ï¿½É«
 			std::string filename;
 			int width, height;
 			TGAImage image;
