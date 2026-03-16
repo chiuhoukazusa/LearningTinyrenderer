@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <math.h>
+#include <cstring>
 
 
 namespace myEigen {
@@ -36,9 +37,8 @@ namespace myEigen {
 		Vector2<T> operator*(U s) const {
 			return Vector2<T>(x * s, y * s);
 		}
-		template<>
 		Vector2<T> operator*(const Vector2<T>& v) const {
-			return Vector3<T>(x * v.x, y * v.y);
+			return Vector2<T>(x * v.x, y * v.y);
 		}
 		template<typename U>
 		Vector2<T>& operator*=(U s) {
@@ -49,8 +49,7 @@ namespace myEigen {
 		Vector2<T> operator/(U s) const {
 			return Vector2<T>(x / s, y / s);
 		}
-		template<>
-		Vector2<T> operator/(Vector2<T> v) const {
+		Vector2<T> operator/(const Vector2<T>& v) const {
 			return Vector2<T>(x / v.x, y / v.y);
 		}
 		template<typename U>
@@ -72,7 +71,7 @@ namespace myEigen {
 			return os << v.x << "," << v.y;
 		}
 		friend Vector2<T> operator*(const T& r, const Vector2<T>& v) {
-			return Vector2<T> *r;
+			return v * r;
 		}
 	};
 
@@ -121,7 +120,6 @@ namespace myEigen {
 		Vector3<T> operator*(U s) const {
 			return Vector3<T>(x * s, y * s, z * s);
 		}
-		template<>
 		Vector3<T> operator*(const Vector3<T>& v) const {
 			return Vector3<T>(x * v.x, y * v.y, z * v.z);
 		}
@@ -134,8 +132,7 @@ namespace myEigen {
 		Vector3<T> operator/(U s) const {
 			return Vector3<T>(x / s, y / s, z / s);
 		}
-		template<>
-		Vector3<T> operator/(Vector3<T> v) const {
+		Vector3<T> operator/(const Vector3<T>& v) const {
 			return Vector3<T>(x / v.x, y / v.y, z / v.z);
 		}
 		template<typename U>
@@ -157,7 +154,7 @@ namespace myEigen {
 			return os << v.x << "," << v.y << "," << v.z;
 		}
 		friend Vector3<T> operator*(const T& r, const Vector3<T>& v) {
-			return Vector3<T> *r;
+			return v * r;
 		}
 	};
 
@@ -211,9 +208,8 @@ namespace myEigen {
 		Vector4<T> operator*(U s) const {
 			return Vector4<T>(x * s, y * s, z * s, w * s);
 		}
-		template<>
 		Vector4<T> operator*(const Vector4<T>& v) const {
-			return Vector3<T>(x * v.x, y * v.y, z * v.z, w * v.w);
+			return Vector4<T>(x * v.x, y * v.y, z * v.z, w * v.w);
 		}
 		template<typename U>
 		Vector4<T>& operator*=(U s) {
@@ -224,8 +220,7 @@ namespace myEigen {
 		Vector4<T> operator/(U s) const {
 			return Vector4<T>(x / s, y / s, z / s, w / s);
 		}
-		template<>
-		Vector4<T> operator/(Vector4<T> v) const {
+		Vector4<T> operator/(const Vector4<T>& v) const {
 			return Vector4<T>(x / v.x, y / v.y, z / v.z, w / v.w);
 		}
 		template<typename U>
@@ -250,7 +245,7 @@ namespace myEigen {
 			return os << v.x << "," << v.y << "," << v.z << "," << v.w;
 		}
 		friend Vector4<T> operator*(const T& r, const Vector4<T>& v) {
-			return Vector4<T> * r;
+			return v * r;
 		}
 	};
 
